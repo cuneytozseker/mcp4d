@@ -85,6 +85,10 @@ Interactive viewport tool: **Extensions > Surface Rectangle**
 
 The tool uses ray-plane intersection for perspective-correct corner placement. Tangent basis is computed by projecting screen/world axes onto the surface plane, with cross-product orthogonalization.
 
+## Scene Building
+
+When building scenes, check [SKILLS.md](SKILLS.md) for matching styles before improvising. If the user references a recipe by name, follow it exactly. If no recipe matches, build from first principles using the available MCP tools.
+
 ## Design Principles
 
 ### Native C++ vs Python Relay
