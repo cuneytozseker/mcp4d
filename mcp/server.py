@@ -106,6 +106,35 @@ def clear_surface_rect() -> dict:
 
 
 @mcp.tool()
+def boolean(object_a: str, object_b: str, operation: str) -> dict:
+    """Boolean operation between two objects. Operations: union, subtract, intersect, without. Bakes result to polygons."""
+    return _send("boolean", {"object_a": object_a, "object_b": object_b, "operation": operation})
+
+
+@mcp.tool()
+def current_state_to_object(name: str) -> dict:
+    """Bake a generator object into polygon geometry (Current State to Object)."""
+    return _send("current_state_to_object", {"name": name})
+
+
+@mcp.tool()
+def select_polys_at_rect() -> dict:
+    """Make object editable and select polygons within the current surface rectangle. Use after drawing a surface rect."""
+    return _send("select_polys_at_rect")
+
+
+@mcp.tool()
+def import_mesh(file_path: str, name: str = "", align_to_surface_rect: bool = False) -> dict:
+    """Import a mesh file (OBJ/FBX/GLB/STL/USD) into the scene. Optionally align to the current surface rectangle."""
+    args = {"file_path": file_path}
+    if name:
+        args["name"] = name
+    if align_to_surface_rect:
+        args["align_to_surface_rect"] = True
+    return _send("import_mesh", args)
+
+
+@mcp.tool()
 def capture_viewport(output_path: str, width: int = 0, height: int = 0) -> dict:
     """Render the active viewport to a PNG file. Returns the file path and camera data."""
     args = {"output_path": output_path}

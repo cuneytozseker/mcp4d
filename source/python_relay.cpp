@@ -17,91 +17,107 @@ static std::string MaxonToStd(const maxon::String& s)
 	return result;
 }
 
-// Escape a string for safe embedding in a Python string literal using compile()
-static maxon::String EscapeForPython(const std::string& code)
+// Escape user code for embedding in a Python string.
+// Replace backslashes, then quotes, then newlines.
+static std::string EscapePythonString(const std::string& s)
 {
-	// We pass the code via compile() + exec() instead of string injection.
-	// This avoids all escaping issues.
-	return maxon::String(code.c_str());
+	std::string out;
+	out.reserve(s.size() + 32);
+	for (char c : s)
+	{
+		switch (c)
+		{
+			case '\\': out += "\\\\"; break;
+			case '\'': out += "\\'"; break;
+			case '\n': out += "\\n"; break;
+			case '\r': out += "\\r"; break;
+			case '\t': out += "\\t"; break;
+			default:   out += c; break;
+		}
+	}
+	return out;
 }
 
 nlohmann::json ExecutePython(const std::string& code)
 {
-	iferr_scope_handler
-	{
-		return json{{"error", "Python execution failed"}};
-	};
-
 	auto vm = MAXON_CPYTHON3VM();
-	auto scope = vm.CreateScope() iferr_return;
+	if (!vm)
+		return json{{"error", "CPYTHON3VM not available"}};
 
-	// Use a bootstrap that receives code via a function parameter,
-	// avoiding string-in-string escaping issues entirely.
-	// The bootstrap defines helpers, then we call _run_user_code with the actual code.
-	maxon::String bootstrap = maxon::String(
-		"import sys, io, traceback\n"
-		"_stdout_capture = io.StringIO()\n"
-		"_stderr_capture = io.StringIO()\n"
-		"def _run_user_code(code_str):\n"
-		"    old_out, old_err = sys.stdout, sys.stderr\n"
-		"    sys.stdout = _stdout_capture\n"
-		"    sys.stderr = _stderr_capture\n"
-		"    try:\n"
-		"        compiled = compile(code_str, '<mcp>', 'exec')\n"
-		"        exec(compiled)\n"
-		"    except Exception:\n"
-		"        traceback.print_exc(file=_stderr_capture)\n"
-		"    finally:\n"
-		"        sys.stdout = old_out\n"
-		"        sys.stderr = old_err\n"
-		"def _get_stdout():\n"
-		"    return _stdout_capture.getvalue()\n"
-		"def _get_stderr():\n"
-		"    return _stderr_capture.getvalue()\n"
+	auto scopeResult = vm.CreateScope();
+	if (scopeResult == maxon::FAILED)
+		return json{{"error", "Failed to create scope"}};
+	auto scope = scopeResult.GetValue();
+
+	// Build a single script that:
+	// 1. Sets up stdout/stderr capture
+	// 2. Runs the user code via compile+exec
+	// 3. Defines getter functions for output
+	std::string escaped = EscapePythonString(code);
+
+	maxon::String fullScript = maxon::String(
+		(std::string(
+			"import sys, io, traceback\n"
+			"_stdout_buf = io.StringIO()\n"
+			"_stderr_buf = io.StringIO()\n"
+			"_old_out, _old_err = sys.stdout, sys.stderr\n"
+			"sys.stdout = _stdout_buf\n"
+			"sys.stderr = _stderr_buf\n"
+			"try:\n"
+			"    exec(compile('") + escaped + std::string("', '<mcp>', 'exec'))\n"
+			"except Exception:\n"
+			"    traceback.print_exc(file=_stderr_buf)\n"
+			"finally:\n"
+			"    sys.stdout = _old_out\n"
+			"    sys.stderr = _old_err\n"
+			"def _get_stdout():\n"
+			"    return _stdout_buf.getvalue()\n"
+			"def _get_stderr():\n"
+			"    return _stderr_buf.getvalue()\n"
+		)).c_str()
 	);
 
-	scope.Init("mcp_python_exec"_s, bootstrap, maxon::ERRORHANDLING::PRINT, nullptr) iferr_return;
-	scope.Execute() iferr_return;
+	auto initResult = scope.Init("mcp_exec"_s, fullScript, maxon::ERRORHANDLING::PRINT, nullptr);
+	if (initResult == maxon::FAILED)
+		return json{{"error", "Init failed: " + MaxonToStd(initResult.GetError().GetMessage())}};
 
-	// Call _run_user_code with the actual code string
+	auto execResult = scope.Execute();
+	if (execResult == maxon::FAILED)
+		return json{{"error", "Execute failed: " + MaxonToStd(execResult.GetError().GetMessage())}};
+
+	// Retrieve output
 	maxon::BlockArray<maxon::Data> helperStack;
-	auto codeArg = maxon::Data(EscapeForPython(code));
-	maxon::BaseArray<maxon::Data*> runArgs;
-	runArgs.Append(&codeArg) iferr_return;
-	auto runBlock = runArgs.ToBlock();
-
-	scope.PrivateInvoke("_run_user_code"_s, helperStack,
-		maxon::GetDataType<maxon::String>(), &runBlock) iferr_return;
-
-	// Retrieve captured output
 	maxon::BaseArray<maxon::Data*> emptyArgs;
 	auto emptyBlock = emptyArgs.ToBlock();
 
-	auto* stdoutRes = scope.PrivateInvoke("_get_stdout"_s, helperStack,
-		maxon::GetDataType<maxon::String>(), &emptyBlock) iferr_return;
-	auto* stderrRes = scope.PrivateInvoke("_get_stderr"_s, helperStack,
-		maxon::GetDataType<maxon::String>(), &emptyBlock) iferr_return;
-
 	std::string stdoutStr, stderrStr;
 
-	if (stdoutRes)
+	auto stdoutInvoke = scope.PrivateInvoke("_get_stdout"_s, helperStack,
+		maxon::GetDataType<maxon::String>(), &emptyBlock);
+	if (stdoutInvoke != maxon::FAILED)
 	{
-		ifnoerr (maxon::String& val = stdoutRes->Get<maxon::String>())
+		auto* res = stdoutInvoke.GetValue();
+		if (res)
 		{
-			stdoutStr = MaxonToStd(val);
+			ifnoerr (maxon::String& val = res->Get<maxon::String>())
+				stdoutStr = MaxonToStd(val);
 		}
 	}
-	if (stderrRes)
+
+	auto stderrInvoke = scope.PrivateInvoke("_get_stderr"_s, helperStack,
+		maxon::GetDataType<maxon::String>(), &emptyBlock);
+	if (stderrInvoke != maxon::FAILED)
 	{
-		ifnoerr (maxon::String& val = stderrRes->Get<maxon::String>())
+		auto* res = stderrInvoke.GetValue();
+		if (res)
 		{
-			stderrStr = MaxonToStd(val);
+			ifnoerr (maxon::String& val = res->Get<maxon::String>())
+				stderrStr = MaxonToStd(val);
 		}
 	}
 
 	json result;
 	result["stdout"] = stdoutStr;
 	result["stderr"] = stderrStr;
-
 	return result;
 }

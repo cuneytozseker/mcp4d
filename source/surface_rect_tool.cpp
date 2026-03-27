@@ -143,6 +143,57 @@ static Bool RaycastAtScreen(BaseDocument* doc, BaseDraw* bd, Float sx, Float sy,
 }
 
 // ---------------------------------------------------------------------------
+// Tangent basis computation
+// ---------------------------------------------------------------------------
+static void ComputeScreenAlignedBasis(BaseDraw* bd, Float mx, Float my,
+                                      const Vector& normal, Vector& outRight, Vector& outUp)
+{
+	Vector screenRight3D = (bd->SW(Vector(mx + 100.0, my, 500.0)) - bd->SW(Vector(mx, my, 500.0))).GetNormalized();
+	outRight = screenRight3D - normal * Dot(screenRight3D, normal);
+	Float rLen = outRight.GetLength();
+	if (rLen > 0.0001)
+		outRight = outRight / rLen;
+	else
+		outRight = Vector(1, 0, 0);
+	outUp = Cross(normal, outRight).GetNormalized();
+}
+
+static void ComputeWorldAlignedBasis(const Vector& normal, Vector& outRight, Vector& outUp)
+{
+	// Find the world axis most perpendicular to the normal
+	Float ax = Abs(normal.x), ay = Abs(normal.y), az = Abs(normal.z);
+
+	Vector worldUp, worldRight;
+	if (ay >= ax && ay >= az)
+	{
+		// Normal is mostly Y — use world X as right, Z as up
+		worldRight = Vector(1, 0, 0);
+		worldUp    = Vector(0, 0, 1);
+	}
+	else if (ax >= ay && ax >= az)
+	{
+		// Normal is mostly X — use world Z as right, Y as up
+		worldRight = Vector(0, 0, 1);
+		worldUp    = Vector(0, 1, 0);
+	}
+	else
+	{
+		// Normal is mostly Z — use world X as right, Y as up
+		worldRight = Vector(1, 0, 0);
+		worldUp    = Vector(0, 1, 0);
+	}
+
+	// Project onto tangent plane and orthogonalize
+	outRight = worldRight - normal * Dot(worldRight, normal);
+	Float rLen = outRight.GetLength();
+	if (rLen > 0.0001)
+		outRight = outRight / rLen;
+	else
+		outRight = Vector(1, 0, 0);
+	outUp = Cross(normal, outRight).GetNormalized();
+}
+
+// ---------------------------------------------------------------------------
 // ToolData implementation
 // ---------------------------------------------------------------------------
 class SurfaceRectTool : public ToolData
@@ -151,6 +202,102 @@ public:
 	virtual Int32 GetState(BaseDocument* doc) override
 	{
 		return CMD_ENABLED;
+	}
+
+	virtual void InitDefaultSettings(BaseDocument* pDoc, BaseContainer& data) override
+	{
+		data.SetInt32(SURFRECTTOOL_ALIGN_MODE, SURFRECTTOOL_ALIGN_SCREEN);
+		data.SetBool(SURFRECTTOOL_SHOW_NORMAL, true);
+		data.SetBool(SURFRECTTOOL_SHOW_DIAGONALS, true);
+		data.SetFloat(SURFRECTTOOL_WIDTH, 0.0);
+		data.SetFloat(SURFRECTTOOL_HEIGHT, 0.0);
+	}
+
+	virtual Bool GetDDescription(const BaseDocument* doc, const BaseContainer& data,
+	                             Description* description, DESCFLAGS_DESC& flags) const override
+	{
+		if (!description->LoadDescription(Tbase))
+			return false;
+
+		const DescID* singleid = description->GetSingleDescID();
+
+		// Group
+		{
+			const DescID cid = ConstDescID(DescLevel(SURFRECTTOOL_GROUP, DTYPE_GROUP, 0));
+			if (!singleid || cid.IsPartOf(*singleid, nullptr))
+			{
+				BaseContainer bc = GetCustomDataTypeDefault(DTYPE_GROUP);
+				bc.SetString(DESC_NAME, "Surface Rectangle"_s);
+				description->SetParameter(cid, bc, ConstDescIDLevel(0));
+			}
+		}
+
+		// Alignment mode cycle
+		{
+			const DescID cid = ConstDescID(DescLevel(SURFRECTTOOL_ALIGN_MODE, DTYPE_LONG, 0));
+			if (!singleid || cid.IsPartOf(*singleid, nullptr))
+			{
+				BaseContainer bc = GetCustomDataTypeDefault(DTYPE_LONG);
+				bc.SetInt32(DESC_CUSTOMGUI, CUSTOMGUI_CYCLE);
+				bc.SetString(DESC_NAME, "Alignment"_s);
+
+				BaseContainer items;
+				items.SetString(SURFRECTTOOL_ALIGN_SCREEN, "Screen"_s);
+				items.SetString(SURFRECTTOOL_ALIGN_WORLD, "World"_s);
+				bc.SetContainer(DESC_CYCLE, items);
+
+				description->SetParameter(cid, bc, ConstDescIDLevel(SURFRECTTOOL_GROUP));
+			}
+		}
+
+		// Show normal checkbox
+		{
+			const DescID cid = ConstDescID(DescLevel(SURFRECTTOOL_SHOW_NORMAL, DTYPE_BOOL, 0));
+			if (!singleid || cid.IsPartOf(*singleid, nullptr))
+			{
+				BaseContainer bc = GetCustomDataTypeDefault(DTYPE_BOOL);
+				bc.SetString(DESC_NAME, "Show Normal"_s);
+				description->SetParameter(cid, bc, ConstDescIDLevel(SURFRECTTOOL_GROUP));
+			}
+		}
+
+		// Show diagonals checkbox
+		{
+			const DescID cid = ConstDescID(DescLevel(SURFRECTTOOL_SHOW_DIAGONALS, DTYPE_BOOL, 0));
+			if (!singleid || cid.IsPartOf(*singleid, nullptr))
+			{
+				BaseContainer bc = GetCustomDataTypeDefault(DTYPE_BOOL);
+				bc.SetString(DESC_NAME, "Show Diagonals"_s);
+				description->SetParameter(cid, bc, ConstDescIDLevel(SURFRECTTOOL_GROUP));
+			}
+		}
+
+		// Width (read-only display)
+		{
+			const DescID cid = ConstDescID(DescLevel(SURFRECTTOOL_WIDTH, DTYPE_REAL, 0));
+			if (!singleid || cid.IsPartOf(*singleid, nullptr))
+			{
+				BaseContainer bc = GetCustomDataTypeDefault(DTYPE_REAL);
+				bc.SetString(DESC_NAME, "Width"_s);
+				bc.SetInt32(DESC_UNIT, DESC_UNIT_METER);
+				description->SetParameter(cid, bc, ConstDescIDLevel(SURFRECTTOOL_GROUP));
+			}
+		}
+
+		// Height (read-only display)
+		{
+			const DescID cid = ConstDescID(DescLevel(SURFRECTTOOL_HEIGHT, DTYPE_REAL, 0));
+			if (!singleid || cid.IsPartOf(*singleid, nullptr))
+			{
+				BaseContainer bc = GetCustomDataTypeDefault(DTYPE_REAL);
+				bc.SetString(DESC_NAME, "Height"_s);
+				bc.SetInt32(DESC_UNIT, DESC_UNIT_METER);
+				description->SetParameter(cid, bc, ConstDescIDLevel(SURFRECTTOOL_GROUP));
+			}
+		}
+
+		flags |= DESCFLAGS_DESC::LOADED;
+		return true;
 	}
 
 	virtual Bool MouseInput(BaseDocument* doc, BaseContainer& data, BaseDraw* bd,
@@ -164,49 +311,32 @@ public:
 
 		if (button != BFM_INPUT_MOUSELEFT) return true;
 
-		ApplicationOutput("SurfaceRect: MouseInput at @, @"_s, mx, my);
-
-		// First click — raycast to find surface point
+		// Raycast
 		Vector hitPos, hitNormal;
 		BaseObject* hitObj = nullptr;
 		Int32 polyIdx = -1;
 
 		if (!RaycastAtScreen(doc, bd, mx, my, hitPos, hitNormal, hitObj, polyIdx))
-		{
-			ApplicationOutput("SurfaceRect: No hit"_s);
 			return true;
-		}
-
-		ApplicationOutput("SurfaceRect: Hit at @, @, @ on polygon @"_s,
-			hitPos.x, hitPos.y, hitPos.z, polyIdx);
 
 		g_surfaceRect.normal    = hitNormal;
 		g_surfaceRect.hitObj    = hitObj;
 		g_surfaceRect.polyIndex = polyIdx;
 
-		// Compute screen-aligned tangent basis on the surface.
-		// Project screen-right onto the tangent plane, then derive up via cross product
-		// to guarantee an orthonormal basis.
-		Vector screenRight3D = (bd->SW(Vector(mx + 100.0, my, 500.0)) - bd->SW(Vector(mx, my, 500.0))).GetNormalized();
+		// Compute tangent basis based on alignment mode
+		Int32 alignMode = data.GetInt32(SURFRECTTOOL_ALIGN_MODE, SURFRECTTOOL_ALIGN_SCREEN);
+		Vector surfRight, surfUp;
 
-		// Project screen-right onto tangent plane (remove normal component)
-		Vector surfRight = screenRight3D - hitNormal * Dot(screenRight3D, hitNormal);
-		Float rLen = surfRight.GetLength();
-		if (rLen > 0.0001)
-			surfRight = surfRight / rLen;
+		if (alignMode == SURFRECTTOOL_ALIGN_WORLD)
+			ComputeWorldAlignedBasis(hitNormal, surfRight, surfUp);
 		else
-			surfRight = Vector(1, 0, 0); // fallback if screen-right is parallel to normal
-
-		// Derive surfUp from cross product — guaranteed orthogonal to both normal and right
-		Vector surfUp = Cross(hitNormal, surfRight).GetNormalized();
+			ComputeScreenAlignedBasis(bd, mx, my, hitNormal, surfRight, surfUp);
 
 		g_surfaceRect.right = surfRight;
 		g_surfaceRect.up    = surfUp;
 
-		// hitPos is the first corner — drag to define opposite corner
-		// by intersecting the mouse ray with the tangent plane at hitPos.
+		// Corner-to-corner drag via ray-plane intersection
 		Vector corner1 = hitPos;
-
 		Float curMx = mx, curMy = my;
 		Float dx, dy;
 		BaseContainer channels;
@@ -226,14 +356,9 @@ public:
 			curMx += dx;
 			curMy += dy;
 
-			// Intersect mouse ray with the tangent plane at corner1
 			Vector rayO = bd->SW(Vector(curMx, curMy, 0.0));
-			Vector rayD = bd->SW(Vector(curMx, curMy, 1000.0)) - rayO;
-			rayD = rayD.GetNormalized();
+			Vector rayD = (bd->SW(Vector(curMx, curMy, 1000.0)) - rayO).GetNormalized();
 
-			// Plane: dot(P - corner1, hitNormal) = 0
-			// Ray: P = rayO + t * rayD
-			// t = dot(corner1 - rayO, hitNormal) / dot(rayD, hitNormal)
 			Float denom = Dot(rayD, hitNormal);
 			if (Abs(denom) < 0.00001)
 				continue;
@@ -241,25 +366,22 @@ public:
 			Float t = Dot(corner1 - rayO, hitNormal) / denom;
 			Vector planeHit = rayO + rayD * t;
 
-			// Project planeHit-corner1 onto surfRight and surfUp
 			Vector delta = planeHit - corner1;
 			Float w = Dot(delta, surfRight);
 			Float h = Dot(delta, surfUp);
 
 			g_surfaceRect.width  = Abs(w);
 			g_surfaceRect.height = Abs(h);
+			g_surfaceRect.center = corner1 + surfRight * (w * 0.5) + surfUp * (h * 0.5);
 
-			g_surfaceRect.center = corner1
-				+ surfRight * (w * 0.5)
-				+ surfUp * (h * 0.5);
+			// Update width/height in tool data for the UI
+			data.SetFloat(SURFRECTTOOL_WIDTH, g_surfaceRect.width);
+			data.SetFloat(SURFRECTTOOL_HEIGHT, g_surfaceRect.height);
 
 			DrawViews(DRAWFLAGS::ONLY_ACTIVE_VIEW | DRAWFLAGS::NO_THREAD | DRAWFLAGS::NO_ANIMATION);
 		}
 
 		win->MouseDragEnd();
-
-		ApplicationOutput("SurfaceRect: Final size @x@"_s, g_surfaceRect.width, g_surfaceRect.height);
-
 		EventAdd();
 		return true;
 	}
@@ -268,7 +390,11 @@ public:
 	                           Float x, Float y, BaseContainer& bc) override
 	{
 		if (!doc || !bd) return false;
-		bc.SetString(RESULT_BUBBLEHELP, "Surface Rectangle Tool: Click to place, drag to size"_s);
+
+		Int32 mode = data.GetInt32(SURFRECTTOOL_ALIGN_MODE, SURFRECTTOOL_ALIGN_SCREEN);
+		const char* modeStr = (mode == SURFRECTTOOL_ALIGN_WORLD) ? "World" : "Screen";
+		bc.SetString(RESULT_BUBBLEHELP, maxon::String(
+			(std::string("Surface Rectangle [") + modeStr + "] — Click + drag to draw").c_str()));
 		bc.SetInt32(RESULT_CURSOR, MOUSE_CROSS);
 		return true;
 	}
@@ -282,10 +408,12 @@ public:
 		if (!(flags & TOOLDRAWFLAGS::HIGHLIGHT) && flags != TOOLDRAWFLAGS::NONE)
 			return TOOLDRAW::NONE;
 
+		Bool showNormal    = data.GetBool(SURFRECTTOOL_SHOW_NORMAL, true);
+		Bool showDiagonals = data.GetBool(SURFRECTTOOL_SHOW_DIAGONALS, true);
+
 		bd->SetMatrix_Matrix(nullptr, Matrix());
 		bd->SetPen(Vector(0, 0.8, 1.0)); // Cyan
 
-		// Compute the 4 corners of the rectangle in world space
 		Vector c = g_surfaceRect.center;
 		Vector r = g_surfaceRect.right * (g_surfaceRect.width * 0.5);
 		Vector u = g_surfaceRect.up * (g_surfaceRect.height * 0.5);
@@ -295,24 +423,30 @@ public:
 		Vector p2 = c + r + u;
 		Vector p3 = c - r + u;
 
-		// Draw wireframe rectangle
+		// Wireframe rectangle
 		bd->DrawLine(p0, p1, 0);
 		bd->DrawLine(p1, p2, 0);
 		bd->DrawLine(p2, p3, 0);
 		bd->DrawLine(p3, p0, 0);
 
-		// Draw diagonals (subtle)
-		bd->SetPen(Vector(0, 0.4, 0.5));
-		bd->DrawLine(p0, p2, 0);
-		bd->DrawLine(p1, p3, 0);
+		// Diagonals
+		if (showDiagonals)
+		{
+			bd->SetPen(Vector(0, 0.4, 0.5));
+			bd->DrawLine(p0, p2, 0);
+			bd->DrawLine(p1, p3, 0);
+		}
 
-		// Draw normal arrow from center
-		bd->SetPen(Vector(1.0, 0.3, 0.0)); // Orange
-		Float arrowLen = maxon::Max(g_surfaceRect.width, g_surfaceRect.height) * 0.3;
-		bd->DrawLine(c, c + g_surfaceRect.normal * arrowLen, 0);
+		// Normal arrow
+		if (showNormal)
+		{
+			bd->SetPen(Vector(1.0, 0.3, 0.0));
+			Float arrowLen = maxon::Max(g_surfaceRect.width, g_surfaceRect.height) * 0.3;
+			bd->DrawLine(c, c + g_surfaceRect.normal * arrowLen, 0);
+		}
 
-		// Draw center handle
-		bd->SetPen(Vector(1.0, 1.0, 0.0)); // Yellow
+		// Center handle
+		bd->SetPen(Vector(1.0, 1.0, 0.0));
 		bd->DrawHandle(c, DRAWHANDLE::BIG, 0);
 
 		return TOOLDRAW::HIGHLIGHTS;

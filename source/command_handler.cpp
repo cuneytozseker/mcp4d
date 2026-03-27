@@ -4,6 +4,8 @@
 #include "viewport_capture.h"
 #include "raycaster.h"
 #include "surface_rect_tool.h"
+#include "native_ops.h"
+#include "mesh_import.h"
 
 #ifdef _MSC_VER
 	#pragma warning(push)
@@ -105,6 +107,35 @@ std::string HandleCommand(const std::string& requestJson, cinema::BaseDocument* 
 		{
 			ClearSurfaceRect();
 			return MakeOk({{"cleared", true}}).dump();
+		}
+		else if (cmd == "boolean")
+		{
+			std::string objA = args.value("object_a", "");
+			std::string objB = args.value("object_b", "");
+			std::string op = args.value("operation", "");
+			if (objA.empty() || objB.empty() || op.empty())
+				return MakeError("boolean requires 'object_a', 'object_b', 'operation'").dump();
+			return MakeOk(BooleanOp(doc, objA, objB, op)).dump();
+		}
+		else if (cmd == "current_state_to_object")
+		{
+			std::string name = args.value("name", "");
+			if (name.empty())
+				return MakeError("current_state_to_object requires 'name'").dump();
+			return MakeOk(CurrentStateToObject(doc, name)).dump();
+		}
+		else if (cmd == "select_polys_at_rect")
+		{
+			return MakeOk(SelectPolysAtRect(doc)).dump();
+		}
+		else if (cmd == "import_mesh")
+		{
+			std::string path = args.value("file_path", "");
+			if (path.empty())
+				return MakeError("import_mesh requires 'file_path'").dump();
+			std::string meshName = args.value("name", "");
+			bool align = args.value("align_to_surface_rect", false);
+			return MakeOk(ImportMesh(doc, path, meshName, align)).dump();
 		}
 		else
 		{

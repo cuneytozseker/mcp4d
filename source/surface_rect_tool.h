@@ -26,6 +26,24 @@ struct SurfaceRect
 	Bool       valid     = false;
 };
 
+// Tool parameter IDs for the Attribute Manager UI
+enum
+{
+	SURFRECTTOOL_GROUP           = 10000,
+	SURFRECTTOOL_ALIGN_MODE      = 10001,  // Cycle: Screen / World / Surface
+	SURFRECTTOOL_SHOW_NORMAL     = 10002,  // Bool: draw normal arrow
+	SURFRECTTOOL_SHOW_DIAGONALS  = 10003,  // Bool: draw diagonal lines
+	SURFRECTTOOL_WIDTH           = 10004,  // Real: read-only current width
+	SURFRECTTOOL_HEIGHT          = 10005,  // Real: read-only current height
+};
+
+// Alignment modes
+enum
+{
+	SURFRECTTOOL_ALIGN_SCREEN = 0,
+	SURFRECTTOOL_ALIGN_WORLD  = 1,
+};
+
 // Global surface rect state — shared between tool and MCP commands
 SurfaceRect& GetSurfaceRect();
 void          ClearSurfaceRect();
