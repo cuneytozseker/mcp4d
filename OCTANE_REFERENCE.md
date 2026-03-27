@@ -28,6 +28,9 @@ ID_OCTANE_MIXTEXTURE        = 1029505   # Mix texture
 ID_OCTANE_NOISE             = 1029530   # Noise texture
 ID_OCTANE_CHECKS            = 1029506   # Checker texture
 ID_OCTANE_DIRT              = 1029531   # Dirt/AO texture
+ID_OCTANE_GRADIENT          = 1011100   # Gradient (great on transmission for edge falloff)
+ID_OCTANE_TRIPLANAR         = 1038882   # Triplanar projection (procedural variation without UVs)
+ID_OCTANE_ADD_TEXTURE       = 1038877   # Add/combine textures
 
 # Tags
 ID_OCTANE_OBJECTTAG         = 1029524   # Octane Object tag
@@ -54,6 +57,9 @@ doc.InsertMaterial(mat)
 tag = obj.MakeTag(c4d.Ttexture)
 tag[c4d.TEXTURETAG_MATERIAL] = mat
 ```
+
+**Material type** (ID `2509`): `2513`=Specular (glass/transparent), `2511`=Diffuse/Glossy. Use `mat[2509] = 2513` for glass.
+**Transmission type** (ID `2632`): controls transmission model.
 
 ## Universal Material Channels (OCT_MAT_*)
 ```
@@ -227,6 +233,14 @@ mat[c4d.OCT_MATERIAL_ROUGHNESS_FLOAT] = 0.5
 
 # Shadow catcher (for compositing)
 # Use Octane Diffuse material with shadow catcher enabled in Octane Object tag
+
+# Clear glass: spec=0, rough=0, transmission=(1,1,1), IOR=1.3
+# Frosted glass: spec=0, rough=0.04, transmission=(1,1,1), IOR=1.3
+# Thick frosted: spec=1, rough=0.1–0.5, transmission=(0.9,0.9,0.9), IOR=1.5
+# Tinted glass: colored transmission, e.g. (0.97,0.73,1)=pink, (0.85,1,1)=cyan
+# Frosted edge falloff: link Gradient(1011100) to transmission channel
+# Procedural frost: link Triplanar(1038882) to roughness or transmission
+# Glossy opaque (ceramic): spec=1, rough=0.15, transmission=0, IOR=2.0
 ```
 
 ## OSL (Open Shading Language)

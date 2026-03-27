@@ -263,6 +263,8 @@ Always call `DrawViews` before `capture_viewport` — the viewport framebuffer w
 
 **Viewport render (`CallCommand(12163)`) requires C4D to be in the foreground.** If C4D is minimized or behind other windows, the render won't execute and `capture_viewport` will grab the stale OpenGL preview instead. Use offline `RenderDocument` as a fallback when viewport render fails.
 
+**Viewport render timing:** Issue the render in one `execute_python` call, wait in a separate call (`time.sleep`), then `capture_viewport` as a third call. Combining render + sleep in the same Python call blocks the main thread and the render may not actually execute during the sleep.
+
 ## Path Format
 
 **Always use forward slashes** in file paths sent to the plugin (e.g. `C:/temp/file.png`). Backslashes get mangled by JSON string escaping (`\t` → tab, `\n` → newline).
