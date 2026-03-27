@@ -30,17 +30,19 @@ Use when: Client wants to show internals, assembly order
 - Fasteners grouped and offset further than body parts
 - Optional: thin lines connecting parts to origin positions
 
-## abstract-block-cluster
-Style: Dense cluster of thin orthogonal slabs, monochrome, editorial/abstract
-Use when: Abstract hero, editorial background, geometric art direction
-- 50–90 thin rectangular slabs (one dim 3–10 cm, others 10–250 cm)
-- Rotations strictly 90° only — no random angles
-- Gaussian distribution for positions, clustered vertically
-- Mix: tall thin (35%), medium (30%), wide short (20%), small accent (15%)
-- Pick one area and pack 20–30 tiny detail blocks for density contrast
-- Cube fillet subdivision 1 (chamfer), radius ~4% of smallest dim — edges catch highlights
-- Colored BG light behind cluster (size 15000+, camera visible, no shadows) instead of emissive sphere
-- Key area light: large, power 80–120, upper-left
-- Fill area light: larger, power 5–10, opposite side
-- Camera: 90–105mm, target expression, frame so blocks bleed off edges
-- Material: deep saturated diffuse, specular 0.3, roughness 0.06, no transmission
+## tech-collage-cluster
+Style: Dense vertical cluster of tech/industrial slabs, multi-color, editorial
+Use when: Abstract hero, tech editorial, futuristic collage, deconstructed aesthetic
+- Build in layers: background plane, hero strip, block cluster, panels, rods, details
+- Thin orthogonal slabs, 90° rotations only, gaussian distribution for positions
+- 3 Z-depth layers: back (dark), mid (main color), front (bright accents)
+- Dominant color 50%, secondary 25%, accent colors 15%, dark 10%
+- Heatsink/corrugated panels: null with 15–20 thin parallel slats (spacing ~2.5 cm)
+- Wide dark panels extending horizontally beyond the cluster for silhouette interest
+- Thin black cylinder rods (vertical + horizontal) trailing off top/bottom
+- Typography: extruded text splines ("SYSTEM", "KEY", numbers) on dark panels
+- Circuit traces: tiny thin cubes in L-shapes, solder dot grids (disc arrays)
+- Cross markers (+) on background for editorial feel
+- Small area lights, high intensity for hard shadows and depth
+- Camera: 100mm+, flat front-on, frame so cluster bleeds off edges
+- Cube chamfer sub 1 for edge highlights

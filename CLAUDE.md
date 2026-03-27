@@ -89,6 +89,8 @@ The tool uses ray-plane intersection for perspective-correct corner placement. T
 
 When building scenes, check [SKILLS.md](SKILLS.md) for matching styles before improvising. If the user references a recipe by name, follow it exactly. If no recipe matches, build from first principles using the available MCP tools.
 
+When faced with complex compositions, break the scene into smaller parts — build and verify each part individually, then bring them together. Don't try to create everything in one shot.
+
 ## Design Principles
 
 ### Native C++ vs Python Relay
@@ -292,8 +294,11 @@ image_path = gen.generate(
 
 Use this for text, logos, labels, warning signs, procedural patterns — anything that's easier as a 2D render than an OSL shader. The generated PNG can be applied as an Octane Image Texture on any object.
 
+## Known Issues
+- **Octane Light tag cannot be created via Python.** `MakeTag(1029526)` and `BaseTag(1029526)` both crash. Workaround: user must add one Octane area light manually, then CC clones it for additional lights.
+- **`MakeEditable` fails via Python relay.** Use native CSTO command instead.
+
 ## TODO
-- [ ] Fix Python relay for `MakeEditable` (currently fails, use native CSTO instead)
 - [ ] Render management (start_render, render_status)
 - [ ] Save scene command
 - [ ] capture_surface_rect_view — viewport render from rect-facing angle for AI context
