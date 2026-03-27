@@ -1,1 +1,2 @@
 fastmcp>=2.0
+tencentcloud-sdk-python>=3.0

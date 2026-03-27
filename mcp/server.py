@@ -145,5 +145,50 @@ def capture_viewport(output_path: str, width: int = 0, height: int = 0) -> dict:
     return _send("capture_viewport", args)
 
 
+@mcp.tool()
+def generate_3d(prompt: str = "", image_url: str = "", enable_pbr: bool = True,
+                face_count: int = 50000, model: str = "3.0",
+                align_to_surface_rect: bool = False) -> dict:
+    """Generate a 3D model using Hunyuan3D. Provide a text prompt or image URL. Optionally align result to surface rect."""
+    from generator import generate, download_result
+
+    # Generate
+    result = generate(prompt=prompt, image_url=image_url, enable_pbr=enable_pbr,
+                      face_count=face_count, model=model)
+
+    if result["status"] != "done" or not result.get("files"):
+        return result
+
+    # Download first OBJ/GLB file
+    mesh_file = None
+    for f in result["files"]:
+        if f["type"] in ("OBJ", "GLB", "GIF"):
+            local_path = download_result(f["url"])
+            if mesh_file is None and f["type"] != "GIF":
+                mesh_file = local_path
+            result.setdefault("local_files", []).append(local_path)
+
+    if not mesh_file:
+        return {**result, "error": "No mesh file in results"}
+
+    # Import into C4D
+    import_args = {"file_path": mesh_file, "name": prompt[:30] if prompt else "generated"}
+    if align_to_surface_rect:
+        import_args["align_to_surface_rect"] = True
+
+    import_result = _send("import_mesh", import_args)
+    result["import"] = import_result.get("data", import_result)
+
+    return result
+
+
+@mcp.tool()
+def save_api_config(secret_id: str, secret_key: str, region: str = "ap-singapore") -> dict:
+    """Save Tencent Cloud API credentials to local config file."""
+    from generator import save_config
+    save_config(secret_id, secret_key, region)
+    return {"status": "saved"}
+
+
 if __name__ == "__main__":
     mcp.run()

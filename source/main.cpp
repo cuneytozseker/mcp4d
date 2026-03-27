@@ -10,6 +10,7 @@ Processes JSON commands on the main thread via MessageData.
 #include "socket_server.h"
 #include "command_handler.h"
 #include "surface_rect_tool.h"
+#include "mcp4d_dialog.h"
 
 using namespace cinema;
 
@@ -84,6 +85,9 @@ cinema::Bool cinema::PluginStart()
 
 	if (!RegisterSurfaceRectTool())
 		ApplicationOutput("MCP Bridge: Failed to register Surface Rect tool"_s);
+
+	if (!RegisterMCP4DDialog())
+		ApplicationOutput("MCP Bridge: Failed to register MCP4D dialog"_s);
 
 	// Register MessageData with timer to poll for commands
 	if (!RegisterMessagePlugin(MCP_BRIDGE_MSG_PLUGIN_ID, "MCP Bridge"_s, 0,

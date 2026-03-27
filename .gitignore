@@ -18,6 +18,10 @@ __pycache__/
 # Temp
 temp/
 
+# Config with API keys
+.mcp4d_config.json
+.env
+
 # OS
 .DS_Store
 Thumbs.db
