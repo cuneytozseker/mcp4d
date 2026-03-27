@@ -228,6 +228,24 @@ obj.SetMg(m)
 
 **Note on hierarchy bounding boxes:** Top-level null objects return size 0. Walk children recursively to compute the true bounding box in world space.
 
+## Python Effector Code
+
+To set code on a Python Effector, use `OEPYTHON_STRING` (ID 1100), **not** `GV_PYTHON_CODE` (ID 400). The effector won't re-evaluate code changed in-place on an existing object. Instead, **delete and recreate** the effector with the code pre-set before inserting:
+
+```python
+eff = c4d.BaseObject(c4d.Omgpython)
+eff[c4d.OEPYTHON_MODE] = c4d.OEPYTHON_MODE_FULLCONTROL  # or OEPYTHON_MODE_PARAMETERS
+eff[c4d.OEPYTHON_STRING] = "import c4d\n..."  # set code BEFORE inserting
+doc.InsertObject(eff)
+
+# Add to cloner's effector list
+ied = c4d.InExcludeData()
+ied.InsertObject(eff, 1)
+cloner[c4d.ID_MG_MOTIONGENERATOR_EFFECTORLIST] = ied
+```
+
+**Full Control mode** uses `GetArray`/`SetArray` on MoData to modify all clones at once. **Parameter Control mode** is called per-clone and returns a weight vector.
+
 ## Camera Positioning
 
 Don't compute camera rotation manually — C4D's HPB convention is error-prone. Instead, select the target object and frame it:
