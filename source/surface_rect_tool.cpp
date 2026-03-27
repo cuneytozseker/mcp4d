@@ -160,37 +160,39 @@ static void ComputeScreenAlignedBasis(BaseDraw* bd, Float mx, Float my,
 
 static void ComputeWorldAlignedBasis(const Vector& normal, Vector& outRight, Vector& outUp)
 {
-	// Find the world axis most perpendicular to the normal
 	Float ax = Abs(normal.x), ay = Abs(normal.y), az = Abs(normal.z);
 
-	Vector worldUp, worldRight;
+	// Pick world axes that make visual sense for each face direction
+	Vector wantRight, wantUp;
 	if (ay >= ax && ay >= az)
 	{
-		// Normal is mostly Y — use world X as right, Z as up
-		worldRight = Vector(1, 0, 0);
-		worldUp    = Vector(0, 0, 1);
+		// Top/bottom face: right=+X, up=+Z
+		wantRight = Vector(1, 0, 0);
+		wantUp    = Vector(0, 0, 1);
 	}
 	else if (ax >= ay && ax >= az)
 	{
-		// Normal is mostly X — use world Z as right, Y as up
-		worldRight = Vector(0, 0, 1);
-		worldUp    = Vector(0, 1, 0);
+		// Left/right face: right=-Z, up=+Y
+		wantRight = Vector(0, 0, -((normal.x >= 0) ? 1.0 : -1.0));
+		wantUp    = Vector(0, 1, 0);
 	}
 	else
 	{
-		// Normal is mostly Z — use world X as right, Y as up
-		worldRight = Vector(1, 0, 0);
-		worldUp    = Vector(0, 1, 0);
+		// Front/back face: right=+X * sign, up=+Y
+		wantRight = Vector(((normal.z >= 0) ? 1.0 : -1.0), 0, 0);
+		wantUp    = Vector(0, 1, 0);
 	}
 
-	// Project onto tangent plane and orthogonalize
-	outRight = worldRight - normal * Dot(worldRight, normal);
+	// Project wantRight onto tangent plane, normalize
+	outRight = (wantRight - normal * Dot(wantRight, normal));
 	Float rLen = outRight.GetLength();
-	if (rLen > 0.0001)
-		outRight = outRight / rLen;
-	else
-		outRight = Vector(1, 0, 0);
-	outUp = Cross(normal, outRight).GetNormalized();
+	outRight = (rLen > 0.0001) ? outRight / rLen : Vector(1, 0, 0);
+
+	// Derive outUp via cross product to guarantee orthogonality,
+	// then flip if it doesn't match the intended direction
+	outUp = Cross(outRight, normal).GetNormalized();
+	if (Dot(outUp, wantUp) < 0)
+		outUp = -outUp;
 }
 
 // ---------------------------------------------------------------------------

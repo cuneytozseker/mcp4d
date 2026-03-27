@@ -165,6 +165,54 @@ Copy the `.xdl64` to your C4D plugins folder and restart C4D.
 claude mcp add cinema4d -- python C:/path/to/mcp/server.py
 ```
 
+## Asset Browser (via Python Relay)
+
+Search and load assets from C4D's Asset Browser programmatically:
+
+```python
+import c4d, maxon
+
+# Search for assets by name
+repo = maxon.AssetInterface.GetUserPrefsRepository()
+found = repo.FindAssets(maxon.AssetTypes.File(), maxon.Id(), maxon.Id(), maxon.ASSET_FIND_MODE.LATEST)
+for asset in found:
+    name = str(asset.GetMetaString(maxon.OBJECT.BASE.NAME, maxon.Resource.GetCurrentLanguage()))
+    if "search_term" in name.lower():
+        print(name, "|", asset.GetId())
+
+# Load an asset into the scene
+assetId = maxon.Id("file_XXXXX")
+maxon.AssetManagerInterface.LoadAssets(repo, [(assetId, "")])
+c4d.EventAdd()
+```
+
+## Object Placement at Surface Rect
+
+To place an object aligned to the current surface rect:
+
+```python
+import c4d
+
+# Get rect data via MCP: get_surface_rect
+# Then build a matrix from the rect basis vectors:
+m = c4d.Matrix()
+m.off = c4d.Vector(cx, cy, cz) + c4d.Vector(nx, ny, nz) * offset  # offset along normal
+m.v1 = c4d.Vector(rx, ry, rz)   # rect right
+m.v2 = c4d.Vector(ux, uy, uz)   # rect up
+m.v3 = c4d.Vector(nx, ny, nz)   # rect normal
+obj.SetMg(m)
+
+# For scaling to fit rect: compute hierarchy bounding box,
+# then uniform scale = min(rect_width/bbox_w, rect_height/bbox_h)
+# Apply scale by multiplying m.v1, m.v2, m.v3 by the scale factor
+```
+
+**Note on hierarchy bounding boxes:** Top-level null objects return size 0. Walk children recursively to compute the true bounding box in world space.
+
+## Path Format
+
+**Always use forward slashes** in file paths sent to the plugin (e.g. `C:/temp/file.png`). Backslashes get mangled by JSON string escaping (`\t` → tab, `\n` → newline).
+
 ## TODO
 - [ ] M6: AI Generation Pipeline (capture_surface_rect_view, Hunyuan3D integration)
 - [ ] Fix Python relay for `MakeEditable` (currently fails, use native CSTO instead)
