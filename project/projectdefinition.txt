@@ -1,0 +1,14 @@
+Platform=Win64;OSX;Linux
+Type=DLL
+
+APIS=\
+cinema.framework;\
+cinema_hybrid.framework;\
+core.framework;\
+python.framework;\
+image.framework
+
+C4D=true
+stylecheck.level=0
+
+ModuleId=net.aerovisual.c4d_mcp_bridge

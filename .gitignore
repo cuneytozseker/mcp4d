@@ -1,0 +1,20 @@
+# Build output
+*.xdl64
+*.lib
+*.exp
+*.pdb
+*.obj
+*.ilk
+
+# IDE
+.vs/
+*.vcxproj.user
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
