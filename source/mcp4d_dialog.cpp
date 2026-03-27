@@ -28,27 +28,8 @@ enum
 	IDC_BTN_SURFACE_RECT = 10300,
 	IDC_BTN_CAPTURE_VP   = 10301,
 
-	IDC_LABEL_PROMPT     = 10400,
-	IDC_EDIT_PROMPT      = 10401,
-	IDC_LABEL_POLYCOUNT  = 10403,
-	IDC_COMBO_POLYCOUNT  = 10404,
-	IDC_LABEL_OUTPUT     = 10405,
-	IDC_COMBO_OUTPUT     = 10406,
-	IDC_BTN_GENERATE_3D  = 10402,
 	IDC_GROUP_LOG        = 10500,
 	IDC_LOG_TEXT         = 10501,
-};
-
-// Combo values
-enum
-{
-	POLYCOUNT_50K  = 0,
-	POLYCOUNT_200K = 1,
-	POLYCOUNT_500K = 2,
-
-	OUTPUT_MODEL_ONLY    = 0,
-	OUTPUT_TEXTURE_ONLY  = 1,
-	OUTPUT_MODEL_TEXTURE = 2,
 };
 
 static constexpr Int32 SURFACE_RECT_TOOL_ID = 1064002;
@@ -103,7 +84,7 @@ public:
 		GroupBorderSpace(8, 8, 8, 8);
 
 			AddStaticText(IDC_LABEL_SECRET_ID, BFH_LEFT, 80, 0, "Secret ID"_s, 0);
-			AddEditText(IDC_EDIT_SECRET_ID, BFH_SCALEFIT, 0, 0);
+			AddEditText(IDC_EDIT_SECRET_ID, BFH_SCALEFIT, 0, 0, EDITTEXT_PASSWORD);
 
 			AddStaticText(IDC_LABEL_SECRET_KEY, BFH_LEFT, 80, 0, "Secret Key"_s, 0);
 			AddEditText(IDC_EDIT_SECRET_KEY, BFH_SCALEFIT, 0, 0, EDITTEXT_PASSWORD);
@@ -134,30 +115,6 @@ public:
 			AddButton(IDC_BTN_SURFACE_RECT, BFH_SCALEFIT, 0, 25, "Surface Rectangle Tool"_s);
 			AddButton(IDC_BTN_CAPTURE_VP, BFH_SCALEFIT, 0, 25, "Capture Viewport"_s);
 
-			AddSeparatorH(0, BFH_SCALEFIT);
-
-			AddStaticText(IDC_LABEL_PROMPT, BFH_LEFT, 0, 0, "3D Generation Prompt"_s, 0);
-			AddEditText(IDC_EDIT_PROMPT, BFH_SCALEFIT, 0, 0);
-
-			// Options row
-			GroupBegin(0, BFH_SCALEFIT | BFV_TOP, 4, 0, ""_s, 0);
-
-				AddStaticText(IDC_LABEL_POLYCOUNT, BFH_LEFT, 50, 0, "Polys"_s, 0);
-				AddComboBox(IDC_COMBO_POLYCOUNT, BFH_LEFT, 100, 0, false, true);
-					AddChild(IDC_COMBO_POLYCOUNT, POLYCOUNT_50K, "50K"_s);
-					AddChild(IDC_COMBO_POLYCOUNT, POLYCOUNT_200K, "200K"_s);
-					AddChild(IDC_COMBO_POLYCOUNT, POLYCOUNT_500K, "500K"_s);
-
-				AddStaticText(IDC_LABEL_OUTPUT, BFH_LEFT, 50, 0, "Output"_s, 0);
-				AddComboBox(IDC_COMBO_OUTPUT, BFH_LEFT, 130, 0, false, true);
-					AddChild(IDC_COMBO_OUTPUT, OUTPUT_MODEL_ONLY, "Model Only"_s);
-					AddChild(IDC_COMBO_OUTPUT, OUTPUT_TEXTURE_ONLY, "Texture Only"_s);
-					AddChild(IDC_COMBO_OUTPUT, OUTPUT_MODEL_TEXTURE, "Model + Texture"_s);
-
-			GroupEnd();
-
-			AddButton(IDC_BTN_GENERATE_3D, BFH_SCALEFIT, 0, 25, "Generate 3D"_s);
-
 		GroupEnd();
 
 		// --- Log ---
@@ -176,8 +133,6 @@ public:
 	virtual Bool InitValues() override
 	{
 		SetString(IDC_EDIT_REGION, "ap-singapore"_s);
-		SetInt32(IDC_COMBO_POLYCOUNT, POLYCOUNT_50K);
-		SetInt32(IDC_COMBO_OUTPUT, OUTPUT_MODEL_TEXTURE);
 
 		// Try to load existing config
 		std::string configPath = GetPluginDir() + "/.mcp4d_config.json";
@@ -272,35 +227,7 @@ public:
 				break;
 			}
 
-			case IDC_BTN_GENERATE_3D:
-			{
-				cinema::String prompt;
-				GetString(IDC_EDIT_PROMPT, prompt);
-
-				if (prompt.GetLength() == 0)
-				{
-					Log("Error: Enter a prompt first"_s);
-					break;
-				}
-
-				Int32 polyIdx = 0;
-				GetInt32(IDC_COMBO_POLYCOUNT, polyIdx);
-				Int32 polyCounts[] = { 50000, 200000, 500000 };
-				Int32 polyCount = polyCounts[polyIdx];
-
-				Int32 outputIdx = 0;
-				GetInt32(IDC_COMBO_OUTPUT, outputIdx);
-				const char* outputModes[] = { "model", "texture", "both" };
-
-				Log(FormatString("Submitting: '@'"_s, prompt));
-				Log(FormatString("  Polys: @  Output: @"_s, polyCount, maxon::String(outputModes[outputIdx])));
-				Log("Waiting for Hunyuan3D... (use generate_3d MCP tool)"_s);
-
-				ApplicationOutput("MCP4D: Generate — '@' polys=@ output=@"_s,
-					prompt, polyCount, maxon::String(outputModes[outputIdx]));
-				break;
 			}
-		}
 		return true;
 	}
 };

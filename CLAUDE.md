@@ -145,7 +145,8 @@ c4d-mcp-bridge/
 │   └── projectdefinition.txt     # CMake build config
 ├── mcp/
 │   ├── server.py                 # FastMCP stdio server (thin adapter)
-│   └── requirements.txt          # fastmcp>=2.0
+│   ├── generator.py              # Hunyuan3D client (submit → poll → download)
+│   └── requirements.txt          # fastmcp + tencentcloud-sdk-python
 └── CLAUDE.md                     # This file
 ```
 
@@ -263,7 +264,19 @@ Always call `DrawViews` before `capture_viewport` — the viewport framebuffer w
 **Always use forward slashes** in file paths sent to the plugin (e.g. `C:/temp/file.png`). Backslashes get mangled by JSON string escaping (`\t` → tab, `\n` → newline).
 
 ## TODO
-- [ ] M6: AI Generation Pipeline (capture_surface_rect_view, Hunyuan3D integration)
 - [ ] Fix Python relay for `MakeEditable` (currently fails, use native CSTO instead)
 - [ ] Render management (start_render, render_status)
 - [ ] Save scene command
+- [ ] capture_surface_rect_view — viewport render from rect-facing angle for AI context
+
+## Future: Direct 3D Generation from C4D UI
+
+Currently 3D generation (Hunyuan3D) runs via the `generate_3d` MCP tool from Claude Code. If we ever want a Generate button inside C4D that works independently:
+
+**Architecture:** The C4D Generate button should NOT call the API on the main thread (blocks C4D for ~4 minutes). Instead:
+1. Generate button sends `{"cmd": "generate_3d_async", ...}` to `localhost:5555`
+2. Command handler spawns a **background Python process**: `python generator.py --prompt "..." --output temp/`
+3. The dialog polls via timer with `{"cmd": "generation_status"}` to update the log panel
+4. When done, the handler calls `import_mesh` with `align_to_surface_rect`
+
+This keeps C4D responsive while generation runs. Use a preprocessor define `MCP4D_ENABLE_GENERATION` to conditionally compile the UI elements for two build variants.
