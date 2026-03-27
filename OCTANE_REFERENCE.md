@@ -275,7 +275,16 @@ bmp.Save("C:\\temp\\octane_preview.png", c4d.FILTER_PNG)
 This gives a usable Octane preview in a few seconds showing actual materials, lighting, and reflections.
 The hardware preview renderer (RDATA_RENDERENGINE_PREVIEWHARDWARE) does NOT show Octane materials.
 
-## Rendering via Python
+## Octane Viewport Render (preferred for CC feedback loop)
+```python
+# Render to Viewport (Ctrl+R) — uses Octane, renders INTO the viewport buffer
+c4d.CallCommand(12163)  # Render Viewport
+import time; time.sleep(15)  # Wait for Octane to finish (adjust based on complexity)
+# Then capture_viewport grabs the Octane-rendered result
+```
+This is the best way to get Octane renders for CC visual feedback — fast, uses current camera, and capture_viewport picks it up.
+
+## Offline Rendering via Python
 ```python
 # RenderDocument uses Octane if it's the active engine, but it's an OFFLINE render,
 # NOT the Live Viewer. The Live Viewer buffer is not accessible from Python/C++.
