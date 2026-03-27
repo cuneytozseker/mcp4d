@@ -26,6 +26,6 @@ Use when: Client wants to show internals, assembly order
 - White void background
 - Even, shadowless lighting (HDRI studio, high intensity)
 - Camera: 50mm, slightly above, orthographic feel
-- Parts exploded along insertion axes
+- Parts exploded along insertion axes (use proportional spacing relative to part bounding boxes)
 - Fasteners grouped and offset further than body parts
 - Optional: thin lines connecting parts to origin positions
