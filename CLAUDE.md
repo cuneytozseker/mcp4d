@@ -264,6 +264,27 @@ Always call `DrawViews` before `capture_viewport` — the viewport framebuffer w
 
 **Always use forward slashes** in file paths sent to the plugin (e.g. `C:/temp/file.png`). Backslashes get mangled by JSON string escaping (`\t` → tab, `\n` → newline).
 
+## AI Decal Generator Plugin
+
+A separate C4D plugin (`ai_decal_generator`) is installed that generates 2D decals/labels/textures using LLM-generated PyCairo or Pillow code. CC can use it via `execute_python`:
+
+```python
+import sys
+sys.path.insert(0, "C:/Users/Aerovisual/AppData/Roaming/Maxon/Maxon Cinema 4D 2026_1ABCDC12/plugins/ai_decal_generator/lib")
+from generator import DecalGenerator
+
+gen = DecalGenerator("C:/Users/Aerovisual/AppData/Roaming/Maxon/Maxon Cinema 4D 2026_1ABCDC12/plugins/ai_decal_generator")
+image_path = gen.generate(
+    prompt="warning label with skull icon",
+    width=1024, height=1024,
+    colors={"primary": (255, 200, 0), "secondary": (0, 0, 0), "background": (255, 255, 255, 255)}
+)
+# image_path -> workspace/current_decal.png
+# Then create an Octane Image Texture material pointing at it
+```
+
+Use this for text, logos, labels, warning signs, procedural patterns — anything that's easier as a 2D render than an OSL shader. The generated PNG can be applied as an Octane Image Texture on any object.
+
 ## TODO
 - [ ] Fix Python relay for `MakeEditable` (currently fails, use native CSTO instead)
 - [ ] Render management (start_render, render_status)
