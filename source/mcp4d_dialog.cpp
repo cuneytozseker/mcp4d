@@ -16,30 +16,12 @@ enum
 	IDC_BTN_SURFACE_RECT = 10300,
 	IDC_BTN_CAPTURE_VP   = 10301,
 
-	IDC_GROUP_LOG        = 10500,
-	IDC_LOG_TEXT         = 10501,
 };
 
 static constexpr Int32 SURFACE_RECT_TOOL_ID = 1064002;
 
 class MCP4DDialog : public GeDialog
 {
-	String _logBuffer;
-
-	void Log(const String& msg)
-	{
-		if (_logBuffer.GetLength() > 0)
-			_logBuffer += "\n"_s;
-		_logBuffer += msg;
-		SetString(IDC_LOG_TEXT, _logBuffer);
-	}
-
-	void LogClear()
-	{
-		_logBuffer = ""_s;
-		SetString(IDC_LOG_TEXT, ""_s);
-	}
-
 public:
 	virtual Bool CreateLayout() override
 	{
@@ -87,16 +69,6 @@ public:
 
 		GroupEnd();
 
-		// --- Log ---
-		GroupBegin(IDC_GROUP_LOG, BFH_SCALEFIT | BFV_SCALEFIT, 1, 0, "Log"_s, 0);
-		GroupBorder(BORDER_WITH_TITLE_BOLD);
-		GroupBorderSpace(8, 4, 8, 4);
-
-			AddMultiLineEditText(IDC_LOG_TEXT, BFH_SCALEFIT | BFV_SCALEFIT, 0, 80,
-				DR_MULTILINE_READONLY | DR_MULTILINE_WORDWRAP | DR_MULTILINE_MONOSPACED);
-
-		GroupEnd();
-
 		return true;
 	}
 
@@ -112,13 +84,12 @@ public:
 			case IDC_BTN_SURFACE_RECT:
 			{
 				CallCommand(SURFACE_RECT_TOOL_ID);
-				Log("Surface Rectangle tool activated"_s);
 				break;
 			}
 
 			case IDC_BTN_CAPTURE_VP:
 			{
-				Log("Use capture_viewport via MCP tool"_s);
+				ApplicationOutput("MCP4D: Use capture_viewport via MCP tool"_s);
 				break;
 			}
 
