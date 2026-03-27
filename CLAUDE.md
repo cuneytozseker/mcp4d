@@ -169,6 +169,21 @@ Copy the `.xdl64` to your C4D plugins folder and restart C4D.
 claude mcp add cinema4d -- python C:/path/to/mcp/server.py
 ```
 
+### Auto-allow MCP tools (optional)
+
+To skip permission prompts for MCP tools and Python commands, create `.claude/settings.json` in your project root:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__cinema4d__*",
+      "Bash(python:*)"
+    ]
+  }
+}
+```
+
 ## Asset Browser (via Python Relay)
 
 Search and load assets from C4D's Asset Browser programmatically:
