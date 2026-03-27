@@ -8,13 +8,13 @@ Trick to discover IDs: drag any Octane node into C4D's Script Manager console, a
 ## Plugin IDs
 ```
 # Materials
-ID_OCTANE_DIFFUSE_MATERIAL  = 1029501   # Diffuse (matte)
+# NOTE: In Octane 2024+, Universal material uses ID 1029501 (was 1029750 in older versions)
+# Always verify with: create material manually, then read mat.GetType()
+ID_OCTANE_UNIVERSAL_MATERIAL = 1029501  # Universal (use this for everything)
 ID_OCTANE_GLOSSY_MATERIAL   = 1029502   # Glossy (reflective)
 ID_OCTANE_SPECULAR_MATERIAL = 1029503   # Specular (glass/transparent)
 ID_OCTANE_MIX_MATERIAL      = 1029504   # Mix two materials
 ID_OCTANE_PORTAL_MATERIAL   = 1029505   # Portal
-ID_OCTANE_UNIVERSAL_MATERIAL = 1029750  # Universal (use this for everything)
-ID_OCTANE_METALLIC_MATERIAL = 1029751   # Metallic
 
 # Textures/Shaders
 ID_OCTANE_IMAGE_TEXTURE     = 1029508   # Image/Bitmap texture
@@ -46,7 +46,7 @@ ID_OCTANE_LIVEVIWER         = 1029529   # Live Viewer
 ## Creating Octane Materials
 ```python
 # Universal material (preferred for all use cases)
-mat = c4d.BaseMaterial(1029750)
+mat = c4d.BaseMaterial(1029501)
 mat.SetName("Mat_Steel")
 doc.InsertMaterial(mat)
 
@@ -163,13 +163,13 @@ while vp:
 ## Common Material Recipes
 ```python
 # Brushed metal
-mat = c4d.BaseMaterial(1029750)
+mat = c4d.BaseMaterial(1029501)
 mat[c4d.OCT_MAT_SPECULAR_MAP_FLOAT] = 1.0  # Full metallic
 mat[c4d.OCT_MATERIAL_ROUGHNESS_FLOAT] = 0.15
 # Set IOR to conductor mode + metal IOR values
 
 # Glossy plastic
-mat = c4d.BaseMaterial(1029750)
+mat = c4d.BaseMaterial(1029501)
 mat[c4d.OCT_MATERIAL_DIFFUSE_COLOR] = c4d.Vector(0.8, 0.2, 0.2)  # Red
 mat[c4d.OCT_MAT_SPECULAR_MAP_FLOAT] = 0.0  # Non-metallic
 mat[c4d.OCT_MATERIAL_ROUGHNESS_FLOAT] = 0.05
@@ -180,7 +180,7 @@ mat[c4d.OCT_MATERIAL_INDEX] = 1.5
 # Or use Universal with transmission
 
 # Matte/Diffuse
-mat = c4d.BaseMaterial(1029750)
+mat = c4d.BaseMaterial(1029501)
 mat[c4d.OCT_MATERIAL_DIFFUSE_COLOR] = c4d.Vector(0.5, 0.5, 0.5)
 mat[c4d.OCT_MAT_SPECULAR_MAP_FLOAT] = 0.0
 mat[c4d.OCT_MATERIAL_ROUGHNESS_FLOAT] = 0.5
@@ -275,6 +275,20 @@ bmp.Save("C:\\temp\\octane_preview.png", c4d.FILTER_PNG)
 This gives a usable Octane preview in a few seconds showing actual materials, lighting, and reflections.
 The hardware preview renderer (RDATA_RENDERENGINE_PREVIEWHARDWARE) does NOT show Octane materials.
 
+## Rendering via Python
+```python
+# RenderDocument uses Octane if it's the active engine, but it's an OFFLINE render,
+# NOT the Live Viewer. The Live Viewer buffer is not accessible from Python/C++.
+rd = doc.GetActiveRenderData().GetClone(c4d.COPYFLAGS_NONE)
+bc = rd.GetDataInstance()
+bc[c4d.RDATA_XRES] = 800.0   # MUST be float in C4D 2026, not int
+bc[c4d.RDATA_YRES] = 600.0
+bmp = c4d.bitmaps.BaseBitmap()
+bmp.Init(800, 600)
+c4d.documents.RenderDocument(doc, bc, bmp, c4d.RENDERFLAGS_EXTERNAL)
+bmp.Save("C:/temp/render.png", c4d.FILTER_PNG)
+```
+
 ## Gotchas
 - Octane materials are NOT C4D Node Materials. No GraphNode/port/wire API.
 - To discover unknown parameter IDs: drag node to Script Manager console, use GetType() and bracket access
@@ -283,6 +297,9 @@ The hardware preview renderer (RDATA_RENDERENGINE_PREVIEWHARDWARE) does NOT show
 - Octane camera/light properties are on TAGS, not the C4D object itself
 - LiveDB materials are Octane materials — same system, just pre-built
 - Always `mat.Message(c4d.MSG_UPDATE)` and `c4d.EventAdd()` after material changes
+- `RDATA_XRES` and `RDATA_YRES` expect **float** in C4D 2026 (not int) — `bc[c4d.RDATA_XRES] = 800.0`
+- `capture_viewport` grabs the hardware preview, NOT the Octane Live Viewer
+- For Octane-quality previews, use `RenderDocument` with low samples
 
 ## Octane docs
 https://docs.otoy.com/cinema4d/OctaneRenderforCinema4D.html
