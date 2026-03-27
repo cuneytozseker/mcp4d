@@ -213,6 +213,18 @@ obj.SetMg(m)
 
 **Note on hierarchy bounding boxes:** Top-level null objects return size 0. Walk children recursively to compute the true bounding box in world space.
 
+## Camera Positioning
+
+Don't compute camera rotation manually — C4D's HPB convention is error-prone. Instead, select the target object and frame it:
+
+```python
+doc.SetActiveObject(obj)
+c4d.CallCommand(12151)  # Frame Selected (same as pressing S key)
+c4d.DrawViews(c4d.DRAWFLAGS_ONLY_ACTIVE_VIEW | c4d.DRAWFLAGS_NO_THREAD | c4d.DRAWFLAGS_STATICBREAK)
+```
+
+Always call `DrawViews` before `capture_viewport` — the viewport framebuffer won't update until a redraw happens.
+
 ## Path Format
 
 **Always use forward slashes** in file paths sent to the plugin (e.g. `C:/temp/file.png`). Backslashes get mangled by JSON string escaping (`\t` → tab, `\n` → newline).
