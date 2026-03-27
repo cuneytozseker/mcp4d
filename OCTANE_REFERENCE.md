@@ -279,7 +279,7 @@ The hardware preview renderer (RDATA_RENDERENGINE_PREVIEWHARDWARE) does NOT show
 ```python
 # Render to Viewport (Ctrl+R) — uses Octane, renders INTO the viewport buffer
 c4d.CallCommand(12163)  # Render Viewport
-import time; time.sleep(15)  # Wait for Octane to finish (adjust based on complexity)
+import time; time.sleep(6)  # Default 6s wait, adjust if user says render isn't done
 # Then capture_viewport grabs the Octane-rendered result
 ```
 This is the best way to get Octane renders for CC visual feedback — fast, uses current camera, and capture_viewport picks it up.
