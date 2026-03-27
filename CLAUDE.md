@@ -98,7 +98,8 @@ Default to `execute_python` for modeling operations. Only add native C++ command
 - **CurrentStateToObject** — baking generators, commonly needed
 
 ### Python Relay Tips
-See [C4D_PYTHON_REFERENCE.md](C4D_PYTHON_REFERENCE.md) for a comprehensive list of commonly used Python methods and constants.
+See [C4D_PYTHON_REFERENCE.md](C4D_PYTHON_REFERENCE.md) for commonly used Python methods and constants.
+See [OCTANE_REFERENCE.md](OCTANE_REFERENCE.md) for Octane material creation, textures, lighting, and render settings.
 
 - Use `c4d.documents.GetActiveDocument()` to get the document
 - `c4d.utils.SendModelingCommand()` for modeling operations
