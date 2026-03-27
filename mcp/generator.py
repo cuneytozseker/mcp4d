@@ -14,7 +14,7 @@ from pathlib import Path
 from tencentcloud.common import credential
 from tencentcloud.common.profile.client_profile import ClientProfile
 from tencentcloud.common.profile.http_profile import HttpProfile
-from tencentcloud.hunyuan.v20230901 import hunyuan_client, models
+from tencentcloud.ai3d.v20250513 import ai3d_client, models
 
 
 CONFIG_PATH = Path(__file__).parent.parent / ".mcp4d_config.json"
@@ -51,18 +51,17 @@ def save_config(secret_id: str, secret_key: str, region: str = "ap-singapore",
     CONFIG_PATH.write_text(json.dumps(config, indent=2))
 
 
-def _get_client() -> hunyuan_client.HunyuanClient:
+def _get_client() -> ai3d_client.Ai3dClient:
     """Create a Tencent Cloud Hunyuan client."""
     secret_id, secret_key = _get_credentials()
 
-    # Read region/endpoint from config or use defaults
+    # Read region from config, endpoint is always the ai3d service
     region = "ap-singapore"
-    endpoint = "hunyuan.intl.tencentcloudapi.com"
+    endpoint = "ai3d.tencentcloudapi.com"
 
     if CONFIG_PATH.exists():
         config = json.loads(CONFIG_PATH.read_text())
         region = config.get("region", region)
-        endpoint = config.get("endpoint", endpoint)
 
     cred = credential.Credential(secret_id, secret_key)
     httpProfile = HttpProfile()
@@ -70,7 +69,7 @@ def _get_client() -> hunyuan_client.HunyuanClient:
     clientProfile = ClientProfile()
     clientProfile.httpProfile = httpProfile
 
-    return hunyuan_client.HunyuanClient(cred, region, clientProfile)
+    return ai3d_client.Ai3dClient(cred, region, clientProfile)
 
 
 def generate(prompt: str = "", image_base64: str = "", image_url: str = "",
