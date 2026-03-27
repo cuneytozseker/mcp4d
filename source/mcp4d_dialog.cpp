@@ -1,6 +1,4 @@
 #include "mcp4d_dialog.h"
-#include <fstream>
-#include <string>
 
 using namespace cinema;
 
@@ -9,18 +7,8 @@ static constexpr Int32 MCP4D_DIALOG_PLUGIN_ID = 1064010;
 // Gadget IDs
 enum
 {
-	IDC_GROUP_MAIN       = 10000,
-	IDC_GROUP_API        = 10001,
 	IDC_GROUP_STATUS     = 10002,
 	IDC_GROUP_TOOLS      = 10003,
-
-	IDC_LABEL_SECRET_ID  = 10100,
-	IDC_EDIT_SECRET_ID   = 10101,
-	IDC_LABEL_SECRET_KEY = 10102,
-	IDC_EDIT_SECRET_KEY  = 10103,
-	IDC_LABEL_REGION     = 10104,
-	IDC_EDIT_REGION      = 10105,
-	IDC_BTN_CONNECT      = 10106,
 
 	IDC_LABEL_STATUS     = 10200,
 	IDC_STATUS_TEXT       = 10201,
@@ -33,27 +21,6 @@ enum
 };
 
 static constexpr Int32 SURFACE_RECT_TOOL_ID = 1064002;
-
-// Helper: get plugin directory path
-static std::string GetPluginDir()
-{
-	// The config file lives next to the mcp/ folder
-	Filename dir = GeGetPluginPath();
-	Char* cstr = cinema::String(dir.GetString()).GetCStringCopy();
-	if (!cstr) return "";
-	std::string result(cstr);
-	DeleteMem(cstr);
-	return result;
-}
-
-static std::string ToStd(const cinema::String& s)
-{
-	Char* cstr = s.GetCStringCopy();
-	if (!cstr) return "";
-	std::string result(cstr);
-	DeleteMem(cstr);
-	return result;
-}
 
 class MCP4DDialog : public GeDialog
 {
@@ -78,8 +45,10 @@ public:
 	{
 		SetTitle("MCP4D"_s);
 
-		// --- API Credentials ---
-		GroupBegin(IDC_GROUP_API, BFH_SCALEFIT | BFV_TOP, 2, 0, "Tencent Cloud"_s, 0);
+		// --- API Credentials (disabled — Tencent 3D API not publicly available yet) ---
+		// Uncomment when a backend is ready (Replicate, local TripoSR, etc.)
+		/*
+		GroupBegin(IDC_GROUP_API, BFH_SCALEFIT | BFV_TOP, 2, 0, "3D Generation API"_s, 0);
 		GroupBorder(BORDER_WITH_TITLE_BOLD);
 		GroupBorderSpace(8, 8, 8, 8);
 
@@ -96,6 +65,7 @@ public:
 			AddButton(IDC_BTN_CONNECT, BFH_LEFT, 120, 0, "Save & Connect"_s);
 
 		GroupEnd();
+		*/
 
 		// --- Status ---
 		GroupBegin(IDC_GROUP_STATUS, BFH_SCALEFIT | BFV_TOP, 2, 0, "Status"_s, 0);
@@ -132,43 +102,6 @@ public:
 
 	virtual Bool InitValues() override
 	{
-		SetString(IDC_EDIT_REGION, "ap-singapore"_s);
-
-		// Try to load existing config
-		std::string configPath = GetPluginDir() + "/.mcp4d_config.json";
-		std::ifstream f(configPath);
-		if (f.is_open())
-		{
-			std::string content((std::istreambuf_iterator<char>(f)),
-			                     std::istreambuf_iterator<char>());
-			f.close();
-
-			// Simple JSON parsing for our known fields
-			auto extractField = [&](const std::string& json, const std::string& key) -> std::string
-			{
-				std::string needle = "\"" + key + "\": \"";
-				auto pos = json.find(needle);
-				if (pos == std::string::npos) return "";
-				pos += needle.size();
-				auto end = json.find("\"", pos);
-				if (end == std::string::npos) return "";
-				return json.substr(pos, end - pos);
-			};
-
-			std::string sid = extractField(content, "secret_id");
-			std::string skey = extractField(content, "secret_key");
-			std::string region = extractField(content, "region");
-
-			if (!sid.empty())
-				SetString(IDC_EDIT_SECRET_ID, maxon::String(sid.c_str()));
-			if (!skey.empty())
-				SetString(IDC_EDIT_SECRET_KEY, maxon::String(skey.c_str()));
-			if (!region.empty())
-				SetString(IDC_EDIT_REGION, maxon::String(region.c_str()));
-
-			SetString(IDC_STATUS_TEXT, "Config loaded"_s);
-		}
-
 		return true;
 	}
 
@@ -176,44 +109,6 @@ public:
 	{
 		switch (id)
 		{
-			case IDC_BTN_CONNECT:
-			{
-				cinema::String secretId, secretKey, region;
-				GetString(IDC_EDIT_SECRET_ID, secretId);
-				GetString(IDC_EDIT_SECRET_KEY, secretKey);
-				GetString(IDC_EDIT_REGION, region);
-
-				if (secretId.GetLength() == 0 || secretKey.GetLength() == 0)
-				{
-					SetString(IDC_STATUS_TEXT, "Enter Secret ID and Key"_s);
-					Log("Error: Secret ID and Key required"_s);
-					break;
-				}
-
-				// Save to config file
-				std::string configPath = GetPluginDir() + "/.mcp4d_config.json";
-				std::ofstream f(configPath);
-				if (f.is_open())
-				{
-					f << "{\n"
-					  << "  \"secret_id\": \"" << ToStd(secretId) << "\",\n"
-					  << "  \"secret_key\": \"" << ToStd(secretKey) << "\",\n"
-					  << "  \"region\": \"" << ToStd(region) << "\",\n"
-					  << "  \"endpoint\": \"hunyuan.intl.tencentcloudapi.com\"\n"
-					  << "}" << std::endl;
-					f.close();
-
-					SetString(IDC_STATUS_TEXT, "Credentials saved"_s);
-					Log("Credentials saved to .mcp4d_config.json"_s);
-					ApplicationOutput("MCP4D: Credentials saved to config"_s);
-				}
-				else
-				{
-					SetString(IDC_STATUS_TEXT, "Failed to save config"_s);
-				}
-				break;
-			}
-
 			case IDC_BTN_SURFACE_RECT:
 			{
 				CallCommand(SURFACE_RECT_TOOL_ID);
