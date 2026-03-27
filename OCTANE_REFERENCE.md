@@ -195,18 +195,35 @@ OSL scripts are C-like code that runs on the GPU at render time.
 CC can write OSL code and inject it into materials programmatically.
 
 ```python
-# OSL Texture node types
-ID_OCTANE_OSL_TEXTURE     = 1033573   # OSL Texture (general purpose)
-ID_OCTANE_OSL_CAMERA      = 1033574   # OSL Camera projection
-ID_OCTANE_OSL_PROJECTION  = 1033575   # OSL Projection
-ID_OCTANE_OSL_DISPLACEMENT = 1033576  # OSL Displacement
+# OSL Texture node type (verified in Octane 2024+)
+ID_OCTANE_OSL_TEXTURE = 1039813
+
+# OSL node parameter IDs
+# 1901 = OSL source code (string)
+# 1903 = compilation status (string, shows "Compilation OK" on success)
+# 1905 = compiled flag (int, 1 = OK)
+# 3200-3215 = int input params (16 slots)
+# 3300-3315 = float input params (16 slots)
+# 3500-3515 = string input params (16 slots)
 
 # Create an OSL texture and connect to material
-osl = c4d.BaseShader(1033573)
-# Set OSL code via the shader's container
-# osl[c4d.OSL_CODE] = osl_source_string  # exact ID needs discovery
+osl = c4d.BaseShader(1039813)
+osl.SetName("My OSL Shader")
+
+# Set the OSL code
+osl[1901] = "shader MyShader(\n    output color c = 0\n)\n{\n    c = color(1, 0, 0);\n}"
+
+# Insert into material and link
 mat.InsertShader(osl)
 mat[c4d.OCT_MATERIAL_DIFFUSE_LINK] = osl
+
+# IMPORTANT: update both shader and material
+osl.Message(c4d.MSG_UPDATE)
+mat.Message(c4d.MSG_UPDATE)
+c4d.EventAdd()
+
+# Verify compilation
+print(osl[1903])  # Should print "Compilation OK"
 ```
 
 **OSL script structure (minimal):**
