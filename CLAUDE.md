@@ -107,6 +107,7 @@ See [OCTANE_REFERENCE.md](OCTANE_REFERENCE.md) for Octane material creation, tex
 - Create objects with `c4d.BaseObject(c4d.Ocube)` etc.
 - Set parameters with `obj[c4d.PRIM_CUBE_LEN] = c4d.Vector(x, y, z)`
 - Build matrices with `c4d.Matrix()` — set `m.off`, `m.v1`, `m.v2`, `m.v3`
+- Cube chamfer: `obj[c4d.PRIM_CUBE_DOFILLET] = True`, `PRIM_CUBE_FRAD` for radius, `PRIM_CUBE_SUBF] = 1` for sharp chamfer (catches edge highlights in render)
 
 ### Working with the Surface Rect from Python
 ```python
@@ -260,9 +261,13 @@ c4d.DrawViews(c4d.DRAWFLAGS_ONLY_ACTIVE_VIEW | c4d.DRAWFLAGS_NO_THREAD | c4d.DRA
 
 Always call `DrawViews` before `capture_viewport` — the viewport framebuffer won't update until a redraw happens.
 
+**Viewport render (`CallCommand(12163)`) requires C4D to be in the foreground.** If C4D is minimized or behind other windows, the render won't execute and `capture_viewport` will grab the stale OpenGL preview instead. Use offline `RenderDocument` as a fallback when viewport render fails.
+
 ## Path Format
 
 **Always use forward slashes** in file paths sent to the plugin (e.g. `C:/temp/file.png`). Backslashes get mangled by JSON string escaping (`\t` → tab, `\n` → newline).
+
+**Viewport captures** go to `<project_root>/plugins/c4d-mcp-bridge/temp/`.
 
 ## AI Decal Generator Plugin
 

@@ -31,11 +31,11 @@ ID_OCTANE_DIRT              = 1029531   # Dirt/AO texture
 
 # Tags
 ID_OCTANE_OBJECTTAG         = 1029524   # Octane Object tag
+ID_OCTANE_LIGHTTAG          = 1029526   # Octane Light tag (on C4D Area Light)
 ID_OCTANE_CAMERATAG         = 1029528   # Octane Camera tag
-ID_OCTANE_LIGHTTAG          = 1029525   # Octane Light tag (emission)
 
 # Environment
-ID_OCTANE_ENVIRONMENT       = 1029526   # Octane Environment tag
+ID_OCTANE_ENVIRONMENT       = 1029526   # Same ID as light tag — context-dependent
 ID_OCTANE_DAYLIGHT          = 1029540   # Octane Daylight environment
 
 # Render
@@ -127,11 +127,51 @@ tag = cam.MakeTag(1029528)  # Octane Camera tag
 # The Octane tag adds render-specific properties
 ```
 
-## Octane Light Tag (Emission)
+## Octane Light Tag
+Octane lights are standard C4D Area Lights (type 5102, `c4d.LIGHT_TYPE` = 8) with an Octane Light tag.
+The tag ID is **1029526** (same ID as Octane Environment — context-dependent).
+
+**Creating Octane lights via Python:**
+`MakeTag(1029526)` and `BaseTag(1029526)` both crash in Python. Clone an existing Octane light instead:
 ```python
-tag = light.MakeTag(1029525)  # Octane Light tag
-# Or use emission channel on any material to make mesh lights
+# Requires at least one Octane light already in the scene as template
+src = doc.SearchObject("Area Light")  # existing Octane light
+light = src.GetClone(c4d.COPYFLAGS_NONE)
+light.SetName("My Light")
+light[c4d.LIGHT_AREADETAILS_SIZEX] = 500
+light[c4d.LIGHT_AREADETAILS_SIZEY] = 500
+light[c4d.LIGHT_COLOR] = c4d.Vector(1, 1, 1)
+doc.InsertObject(light)
+
+# Modify Octane tag on the clone
+tag = light.GetFirstTag()
+while tag:
+    if tag.GetType() == 1029526:
+        tag[1151] = 100.0   # Power
+        tag[1160] = True     # Use light color
+        tag[1163] = False    # Camera visibility off
+        break
+    tag = tag.GetNext()
 ```
+
+**Octane Light Tag parameter IDs:**
+```
+1161  Enable              (bool)
+1159  Type                (int)     # 0=default
+1183  Light type          (int)     # 1=area
+1151  Power               (float)   # default 100.0
+1152  Temperature         (float)   # Kelvin, default 6500.0
+1155  Texture             (link)    # Emission texture
+1154  Distribution        (link)    # IES / distribution
+1166  Surface brightness  (bool)
+1172  Double sided        (bool)
+1153  Normalize           (bool)
+1163  Camera visibility   (bool)   # Turn OFF so light geometry doesn't appear in render
+1171  Cast shadows        (bool)
+```
+**Tip:** Always set `tag[1163] = False` (camera visibility off) on area lights, otherwise the light rectangle renders as a bright white shape in the scene.
+
+**Colored background trick:** Use a huge area light (size 15000+) behind the scene with camera visibility ON, cast shadows OFF, `use light color` enabled, and the C4D light color set to your background color. More reliable than emissive spheres for solid-color Octane backgrounds.
 
 ## Octane Environment
 ```python
