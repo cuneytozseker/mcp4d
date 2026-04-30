@@ -53,6 +53,7 @@ mat = c4d.BaseMaterial(c4d.Mmaterial)         # create standard material
 mat[c4d.MATERIAL_COLOR_COLOR] = Vector(r,g,b) # RGB 0-1
 tag = obj.MakeTag(c4d.Ttexture)               # assign to object
 tag[c4d.TEXTURETAG_MATERIAL] = mat
+tag[c4d.TEXTURETAG_PROJECTION] = 3            # Cubic (0=UVW, 1=Spherical, 2=Cylindrical, 3=Cubic, 4=Frontal, 5=Spatial, 6=Flat)
 shader = c4d.BaseShader(c4d.Xbitmap)          # bitmap texture
 shader[c4d.BITMAPSHADER_FILENAME] = "path.png"
 mat.InsertShader(shader)

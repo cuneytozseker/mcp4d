@@ -1,5 +1,6 @@
 # Build output
 *.xdl64
+!dist/*.xdl64
 *.lib
 *.exp
 *.pdb

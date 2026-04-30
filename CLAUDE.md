@@ -40,6 +40,22 @@ Send newline-delimited JSON to `localhost:5555`. One command per TCP connection.
 | `get_object_info` | `name` | Points, polygons, bbox, tags for one object |
 | `list_materials` | — | All materials with types and channel info |
 
+**IMPORTANT — Large scene safety:** `get_scene_info` recursively traverses the entire scene hierarchy. On large/complex scenes (hundreds+ objects) this can crash C4D. To avoid this:
+- **Default behavior:** Use `execute_python` to read only top-level objects first (names, types, visibility). This gives you a scene overview without deep traversal.
+- **Drill down on demand:** Use `get_object_info` to inspect a specific object's children, tags, and geometry when needed.
+- **Only use `get_scene_info` on small scenes** where you're confident the object count is low (e.g. scenes you just built).
+
+Quick top-level scan via Python:
+```python
+doc = c4d.documents.GetActiveDocument()
+obj = doc.GetFirstObject()
+result = []
+while obj:
+    result.append(f"{obj.GetName()} [{obj.GetTypeName()}] children={1 if obj.GetDown() else 0}")
+    obj = obj.GetNext()
+print("\n".join(result))
+```
+
 ### Python Relay
 | Command | Args | Returns |
 |---------|------|---------|
@@ -91,6 +107,13 @@ When building scenes, check [SKILLS.md](SKILLS.md) for matching styles before im
 
 When faced with complex compositions, break the scene into smaller parts — build and verify each part individually, then bring them together. Don't try to create everything in one shot.
 
+### Reference Docs Checklist
+**Before starting any scene work, read the relevant docs:**
+- [SKILLS.md](SKILLS.md) — Recipes and styles. **Read the full recipe text** before building; don't work from memory.
+- [REDSHIFT_REFERENCE.md](REDSHIFT_REFERENCE.md) — RS material creation, node IDs, light parameters, material recipes.
+- [OCTANE_REFERENCE.md](OCTANE_REFERENCE.md) — Octane material IDs, texture nodes, light tags, environment setup.
+- [C4D_PYTHON_REFERENCE.md](C4D_PYTHON_REFERENCE.md) — Common Python methods, constants, modeling commands.
+
 ## Design Principles
 
 ### Native C++ vs Python Relay
@@ -110,6 +133,22 @@ See [OCTANE_REFERENCE.md](OCTANE_REFERENCE.md) for Octane material creation, tex
 - Set parameters with `obj[c4d.PRIM_CUBE_LEN] = c4d.Vector(x, y, z)`
 - Build matrices with `c4d.Matrix()` — set `m.off`, `m.v1`, `m.v2`, `m.v3`
 - Cube chamfer: `obj[c4d.PRIM_CUBE_DOFILLET] = True`, `PRIM_CUBE_FRAD` for radius, `PRIM_CUBE_SUBF] = 1` for sharp chamfer (catches edge highlights in render)
+- **Safe hierarchy traversal:** Never recursively traverse an entire object hierarchy in a single `execute_python` call — deep or complex hierarchies (imported assets, mesh groups) can crash C4D. Instead, traverse **one level at a time**: read direct children in one call, then drill into a specific branch in a follow-up call. This applies to any tree walk — scene scanning, bounding box computation, joint chains, etc.
+- **Keep `execute_python` calls small and focused.** Don't combine heavy computation (FK solvers, brute-force searches) with scene navigation and key updates in a single call — long-running scripts can crash C4D. Split into separate calls: (1) navigate and read data, (2) compute/solve, (3) apply changes, (4) verify.
+
+### FK/IK Solving for Animated Hierarchies
+- **Animation tracks override `SetRelRot()`.** Keyframed values snap back on scene evaluation. Always modify key values directly on curves (`CTrack` → `CCurve` → `CKey.SetValue()`), not the object's rotation.
+- **FK simulation in pure math:** Read `GetMl()` for each joint once, then compute forward kinematics in Python without scene re-evaluation. Apply solved key values in a separate call.
+- **Pre-multiply rotation delta on decomposed local matrix:**
+  ```python
+  def apply_h_delta(ml, delta):
+      t = c4d.Matrix(); t.off = ml.off
+      r = c4d.Matrix(); r.v1 = ml.v1; r.v2 = ml.v2; r.v3 = ml.v3
+      rot = c4d.utils.HPBToMatrix(c4d.Vector(delta, 0, 0), c4d.ROTATIONORDER_HPB)
+      return t * rot * r
+  ```
+  Always use `c4d.utils.HPBToMatrix()` — hand-rolled rotation matrices get the sign wrong due to C4D's left-handed coordinate system.
+- **Distribute rotation across 3+ joints for position control.** Two-joint counter-rotation (d2, d5=-d2) gives only 1 DOF for position — height changes couple with Z drift. Distributing across 3 joints (d2, d5, d8) with `d8 = -(d2 + d5)` preserves the tip's up vector while giving **2 independent DOFs** for both Y and Z positioning.
 
 ### Working with the Surface Rect from Python
 ```python
@@ -231,7 +270,7 @@ obj.SetMg(m)
 # Apply scale by multiplying m.v1, m.v2, m.v3 by the scale factor
 ```
 
-**Note on hierarchy bounding boxes:** Top-level null objects return size 0. Walk children recursively to compute the true bounding box in world space.
+**Note on hierarchy bounding boxes:** Top-level null objects return size 0. Walk children one level at a time across multiple `execute_python` calls to compute the true bounding box in world space (see safe hierarchy traversal rule above).
 
 ## Python Effector Code
 
@@ -253,6 +292,13 @@ cloner[c4d.ID_MG_MOTIONGENERATOR_EFFECTORLIST] = ied
 
 ## Camera Positioning
 
+**Default camera start position:** When creating a new scene camera, use C4D's default perspective angle as the starting point:
+
+```python
+cam.SetAbsPos(c4d.Vector(600, 300, -600))
+cam.SetAbsRot(c4d.Vector(c4d.utils.Rad(-20), c4d.utils.Rad(45), 0))  # H=45, P=-20, B=0
+```
+
 Don't compute camera rotation manually — C4D's HPB convention is error-prone. Instead, select the target object and frame it:
 
 ```python
@@ -273,33 +319,21 @@ Always call `DrawViews` before `capture_viewport` — the viewport framebuffer w
 
 **Viewport captures** go to `<project_root>/plugins/c4d-mcp-bridge/temp/`.
 
-## AI Decal Generator Plugin
+## Generating Textures with Pillow
 
-A separate C4D plugin (`ai_decal_generator`) is installed that generates 2D decals/labels/textures using LLM-generated PyCairo or Pillow code. CC can use it via `execute_python`:
+For technical, typographic, informational, or signage textures, generate them locally with Pillow via `Bash` (not C4D Python). Save the PNG to `temp/`, then create a material in C4D pointing to the image file.
 
-```python
-import sys
-sys.path.insert(0, "C:/Users/Aerovisual/AppData/Roaming/Maxon/Maxon Cinema 4D 2026_1ABCDC12/plugins/ai_decal_generator/lib")
-from generator import DecalGenerator
-
-gen = DecalGenerator("C:/Users/Aerovisual/AppData/Roaming/Maxon/Maxon Cinema 4D 2026_1ABCDC12/plugins/ai_decal_generator")
-image_path = gen.generate(
-    prompt="warning label with skull icon",
-    width=1024, height=1024,
-    colors={"primary": (255, 200, 0), "secondary": (0, 0, 0), "background": (255, 255, 255, 255)}
-)
-# image_path -> workspace/current_decal.png
-# Then create an Octane Image Texture material pointing at it
-```
-
-Use this for text, logos, labels, warning signs, procedural patterns — anything that's easier as a 2D render than an OSL shader. The generated PNG can be applied as an Octane Image Texture on any object.
+- Use `RGBA` mode when the user wants transparency
+- When transparency is needed, pipe the same image to both the color and opacity channels of the material
+- Use gamma 2.2 for color textures, gamma 1.0 (linear) for opacity/alpha
+- Save to `<project_root>/plugins/c4d-mcp-bridge/temp/`
 
 ## Known Issues
-- **Octane Light tag cannot be created via Python.** `MakeTag(1029526)` and `BaseTag(1029526)` both crash. Workaround: user must add one Octane area light manually, then CC clones it for additional lights.
+- **Octane Light tag cannot be created via Python.** `MakeTag(1029526)` and `BaseTag(1029526)` both crash. Workaround: user must add one Octane area light manually, then CC clones it for additional lights. Make sure the cloned lights are enabled, user might add the reference light disabled.
 - **`MakeEditable` fails via Python relay.** Use native CSTO command instead.
 
 ## TODO
-- [ ] Render management (start_render, render_status)
+- [ ] Render management (start_render, render_status) — use MSG_MULTI_RENDERNOTIFICATION in CoreMessage to track start/stop, BatchRender::IsRendering() for queue status, BASEBITMAP_DATA_PROGRESS_* on render bitmap for live progress (frame %, phase, elapsed time)
 - [ ] Save scene command
 - [ ] capture_surface_rect_view — viewport render from rect-facing angle for AI context
 

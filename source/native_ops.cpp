@@ -72,7 +72,7 @@ nlohmann::json BooleanOp(BaseDocument* doc, const std::string& objectA,
 	}
 
 	cloneA->InsertUnder(boolGen);
-	cloneB->InsertUnder(boolGen);
+	cloneB->InsertUnderLast(boolGen);
 
 	// Bake the boolean generator via CSTO
 	ModelingCommandData mcd;
@@ -93,9 +93,27 @@ nlohmann::json BooleanOp(BaseDocument* doc, const std::string& objectA,
 		return json{{"error", "Boolean produced no result"}};
 	}
 
-	// Insert result, name it, clean up
-	resultObj->SetName(boolGen->GetName());
+	// CSTO on a Boole returns a Null wrapper — take the first polygon child.
+	if (!resultObj->IsInstanceOf(Opolygon) && resultObj->GetDown())
+	{
+		BaseObject* child = resultObj->GetDown();
+		while (child)
+		{
+			if (child->IsInstanceOf(Opolygon))
+			{
+				child->Remove();
+				BaseObject::Free(resultObj);
+				resultObj = child;
+				break;
+			}
+			child = child->GetNext();
+		}
+	}
+
 	doc->InsertObject(resultObj, nullptr, nullptr);
+
+	// Name and select result
+	resultObj->SetName(boolGen->GetName());
 	doc->AddUndo(UNDOTYPE::NEWOBJ, resultObj);
 	doc->SetActiveObject(resultObj);
 

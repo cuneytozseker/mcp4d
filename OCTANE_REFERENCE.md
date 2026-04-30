@@ -31,6 +31,8 @@ ID_OCTANE_DIRT              = 1029531   # Dirt/AO texture
 ID_OCTANE_GRADIENT          = 1011100   # Gradient (great on transmission for edge falloff)
 ID_OCTANE_TRIPLANAR         = 1038882   # Triplanar projection (procedural variation without UVs)
 ID_OCTANE_ADD_TEXTURE       = 1038877   # Add/combine textures
+ID_OCTANE_BLACKBODY_EMISSION = 1029641  # Blackbody Emission (solid color emitter)
+ID_OCTANE_TEXTURE_EMISSION  = 1029642   # Texture Emission (image/texture emitter)
 
 # Tags
 ID_OCTANE_OBJECTTAG         = 1029524   # Octane Object tag
@@ -62,59 +64,106 @@ tag[c4d.TEXTURETAG_MATERIAL] = mat
 **Transmission type** (ID `2632`): controls transmission model.
 
 ## Universal Material Channels (OCT_MAT_*)
+
+**IMPORTANT:** These `OCT_MATERIAL_*` named constants do **NOT** exist in the `c4d` Python module.
+Use the numeric IDs below instead (verified by dumping `mat.GetDescription()`):
+
 ```
 # Albedo/Diffuse
-OCT_MATERIAL_DIFFUSE_LINK          # Albedo texture slot
-OCT_MATERIAL_DIFFUSE_COLOR         # Albedo color (Vector RGB 0-1)
-OCT_MATERIAL_DIFFUSE_FLOAT         # Albedo float
+2515  Albedo color          (Vector RGB 0-1)
+2517  Albedo texture        (shader link)
+2518  Albedo float
+2519  Albedo mix
 
-# Specular/Reflection
-OCT_MAT_SPECULAR_MAP_LINK          # Specular/metallic texture slot
-OCT_MAT_SPECULAR_MAP_FLOAT         # Specular float (0-1)
+# Specular/Metallic
+2522  Specular color        (Vector)
+2523  Specular float        (0-1)
+2524  Specular texture      (shader link)
+2613  Metallic float
 
 # Roughness
-OCT_MATERIAL_ROUGHNESS_LINK        # Roughness texture slot
-OCT_MATERIAL_ROUGHNESS_FLOAT       # Roughness float (0=mirror, 1=matte)
+2531  Roughness color       (Vector)
+2532  Roughness float       (0=mirror, 1=matte)
+2533  Roughness texture     (shader link)
 
 # Bump/Normal
-OCT_MATERIAL_BUMP_LINK             # Bump texture slot
-OCT_MATERIAL_BUMP_FLOAT            # Bump strength
-OCT_MATERIAL_NORMAL_LINK           # Normal map slot
+2643  Bump height           (float)
+2539  Bump texture          (shader link)
+2542  Normal texture        (shader link)
 
 # Opacity
-OCT_MATERIAL_OPACITY_LINK          # Opacity texture slot
-OCT_MATERIAL_OPACITY_FLOAT         # Opacity float
+2546  Opacity color         (Vector)
+2547  Opacity float
+2545  Opacity texture       (shader link)
 
 # Emission
-OCT_MATERIAL_EMISSION              # Emission texture/node
-OCT_MATERIAL_EMISSION_LINK         # Emission link
+2557  Emission texture      (shader link)  ← requires Texture Emission (1029642) or Blackbody Emission (1029641)
+
+# Texture Emission node (1029642) params:
+#   2170  Texture input   (shader link) ← pipe ImageTexture (1029508) or RgbSpectrum here
+#   2171  Power           (float, default 100.0)
+# Wiring: ImageTexture → TextureEmission[2170] → mat[2557]
 
 # Displacement
-OCT_MATERIAL_DISPLACEMENT_LINK     # Displacement texture slot
-OCT_MATERIAL_DISPLACEMENT_FLOAT    # Displacement amount
+2580  Displacement texture  (shader link)
 
 # Transmission
-OCT_MATERIAL_TRANSMISSION_LINK     # Transmission texture
-OCT_MATERIAL_TRANSMISSION_FLOAT    # Transmission amount
+2632  Transmission type     (int)
+2554  Transmission color    (Vector)
+2556  Transmission float
+2555  Transmission texture  (shader link)
 
 # Index of Refraction
-OCT_MATERIAL_INDEX                 # IOR value (glass=1.5, water=1.33, diamond=2.42)
+2551  IOR                   (float, glass=1.5, water=1.33, diamond=2.42)
 
 # Coating
-OCT_MATERIAL_COATING_FLOAT         # Coating amount
-OCT_MATERIAL_COATING_ROUGHNESS     # Coating roughness
-OCT_MATERIAL_COATING_IOR           # Coating IOR
+2620  Coating float
+2616  Coating roughness     (float)
+2617  Coating IOR           (float)
+
+# Film layer
+2536  Film color            (Vector)
+2537  Film float
+2538  Film IOR              (float)
+
+# Common
+2558  Shadow catcher        (bool toggle)
+2559  Smooth                (bool toggle)
+2581  Rounded edges         (float)
 ```
 
 ## Image Texture Properties
+
+**IMPORTANT:** Always use Octane's ImageTexture node (1029508) instead of C4D's Xbitmap for Octane materials.
+
 ```python
-tex = c4d.BaseShader(1029508)       # ID_OCTANE_IMAGE_TEXTURE
-tex[c4d.IMAGETEXTURE_FILE] = "C:\\textures\\diffuse.png"
-tex[c4d.IMAGETEXTURE_GAMMA] = 2.2   # sRGB=2.2, linear/data=1.0
-tex[c4d.IMAGETEXTURE_MODE] = 0      # 0=normal
-tex[c4d.IMAGETEX_BORDER_MODE] = 0
+tex = c4d.BaseShader(1029508)       # Octane ImageTexture
+tex[1100] = "C:/textures/diffuse.png"  # File path (use forward slashes)
+tex[1109] = 1.0                     # Power
+tex[1118] = 2                       # Color space (2=sRGB)
+tex[1102] = 2.2                     # Legacy gamma (sRGB=2.2, linear/data=1.0)
+tex[1104] = 0                       # Invert (0=off)
 mat.InsertShader(tex)
-mat[c4d.OCT_MATERIAL_DIFFUSE_LINK] = tex
+mat[2517] = tex                     # Albedo texture link (use numeric ID)
+```
+
+## Displacement Shader
+
+```python
+# Create Octane ImageTexture for the displacement map
+disp_tex = c4d.BaseShader(1029508)  # Octane ImageTexture
+disp_tex[1100] = "C:/textures/height.png"
+disp_tex[1109] = 1.0
+mat.InsertShader(disp_tex)
+
+# Create Octane Displacement shader (1031901)
+disp = c4d.BaseShader(1031901)
+disp[2050] = disp_tex               # Texture input (shader link)
+disp[2052] = 2.0                    # Height
+disp[2054] = 0.0                    # Mid level
+disp[2062] = 0                      # Subdivision level
+mat.InsertShader(disp)
+mat[2580] = disp                    # Material displacement slot
 ```
 
 ## Octane Object Tag
@@ -189,6 +238,51 @@ env = c4d.BaseObject(1029526)       # Octane Environment
 # Daylight/Sun+Sky
 sky = c4d.BaseObject(1029540)       # Octane Daylight
 # Turbidity, sun direction, ground color
+```
+
+## Octane Sky (via C4D Sky + Environment Tag)
+
+Use a C4D Sky object (5105) with an **Octane Environment tag (1029643)** for procedural backgrounds.
+
+```python
+# Create Sky + Octane Environment tag
+sky = c4d.BaseObject(5105)           # C4D Sky
+sky.SetName("OctaneSky")
+doc.InsertObject(sky)
+
+tag = sky.MakeTag(1029643)           # Octane Environment tag (NOT 1029526)
+
+# Octane Environment tag parameter IDs
+# [1150]  Texture         (shader link)   — main environment texture
+# [1151]  Power           (float)         — intensity, default 1.0
+# [1153]  Importance sampling (int)
+# [1154]  Rotation X      (float)
+# [1155]  Rotation Y      (float)
+# [1158]  Medium radius   (float)
+# [1159]  Backplate       (int)
+# [1160]  Visenv          (int)
+# [1164]  Medium          (int)
+
+# SineWave procedural background (good for dark abstract scenes)
+sine = c4d.BaseShader(1029520)       # Octane SineWave texture
+sine.SetName("SineWave")
+
+rgb = c4d.BaseShader(1029504)        # Octane RgbSpectrum (NOT 1029510)
+rgb[1200] = c4d.Vector(0.07, 0.08, 0.08)  # dark grey
+sine[1250] = rgb                     # color input
+
+tag.InsertShader(rgb)
+tag.InsertShader(sine)
+tag[1150] = sine                     # texture slot
+tag[1151] = 1.0                      # power
+```
+
+**Octane texture type IDs used in environments:**
+```
+1029520  SineWave        — procedural sine pattern
+1029504  RgbSpectrum     — flat RGB color (use as color input to other textures)
+1029510  RGB Spectrum    — alternative RGB color node
+1029508  ImageTexture    — for HDRI maps
 ```
 
 ## Octane Render Settings
