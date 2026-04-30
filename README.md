@@ -10,6 +10,7 @@ Claude Code CLI
 ```
 
 ## What It Does
+<img width="600" height="337" alt="ezgif com-video-to-gif-converter" src="https://github.com/user-attachments/assets/d5be754f-7a36-4209-8063-122892031e1c" />
 
 Claude Code gains full access to Cinema 4D through 15 native commands:
 
@@ -26,12 +27,15 @@ Claude Code gains full access to Cinema 4D through 15 native commands:
 The `execute_python` relay is the escape hatch. Anything that doesn't have a dedicated native command can be done through C4D's Python API. Native commands exist where Python is unreliable (booleans, CSTO) or where C++ is significantly better (scene traversal, raycasting, viewport capture).
 
 ## Surface Rectangle Tool
+<img width="600" height="337" alt="ezgif com-video-to-gif-converter (1)" src="https://github.com/user-attachments/assets/f3669116-fde2-4619-8943-36bdd70233ff" />
+<img width="600" height="337" alt="ezgif com-video-to-gif-converter (2)" src="https://github.com/user-attachments/assets/ce4e9ea5-cf27-41c7-9659-227989da57d9" />
 
 An interactive viewport tool (**Extensions > Surface Rectangle**) that lets you click and drag on any polygon surface to define a rectangle. The rect data is shared with MCP -- draw interactively in the viewport, then read it programmatically from Claude Code.
 
 Used for placing imported meshes, selecting polygon regions, and defining areas of interest on surfaces.
 
 ## Recipes and Skills
+<img width="600" height="337" alt="MACP4D_1-ezgif com-video-to-gif-converter" src="https://github.com/user-attachments/assets/f443da9e-3ee8-44a1-a0a8-76f1e5426629" />
 
 The plugin ships with a recipe system in `SKILLS.md` that gives Claude Code ready-made workflows for common scene types. When you describe what you want (e.g. "dark moody product shot" or "exploded technical view"), Claude matches your description to a recipe and follows it step by step.
 
@@ -45,6 +49,10 @@ Current recipes include:
 You can also reference a recipe by name ("build a tech-collage-cluster") and Claude will follow it exactly.
 
 Beyond recipes, `SKILLS.md` includes utility skills like polygon counting, texture size auditing, and batch deletion tools that Claude uses automatically when relevant.
+
+<img width="600" height="337" alt="ezgif com-video-to-gif-converter (4)" src="https://github.com/user-attachments/assets/2d10ec37-fe79-4bba-94f0-9231fc46d9ef" />
+<img width="600" height="337" alt="ezgif com-video-to-gif-converter (5)" src="https://github.com/user-attachments/assets/c457343e-cbd0-40b9-a9d7-7ff34462ff2e" />
+<img width="600" height="337" alt="ezgif com-video-to-gif-converter (3)" src="https://github.com/user-attachments/assets/248febcf-057e-422f-9f9e-36af817ee7a7" />
 
 ## Reference Documents
 
