@@ -48,6 +48,8 @@ Current recipes include:
 
 You can also reference a recipe by name ("build a tech-collage-cluster") and Claude will follow it exactly.
 
+You can also teach Claude Code new recipes by walking it through your workflow step by step. It learns from your actions and saves them as reusable recipes so you don't have to repeat yourself. Even better -- ask Claude Code to generate Python Extensions with dynamic fields so the back-and-forth becomes a single click.
+
 Beyond recipes, `SKILLS.md` includes utility skills like polygon counting, texture size auditing, and batch deletion tools that Claude uses automatically when relevant.
 
 <img width="600" height="337" alt="ezgif com-video-to-gif-converter (4)" src="https://github.com/user-attachments/assets/2d10ec37-fe79-4bba-94f0-9231fc46d9ef" />
