@@ -22,26 +22,31 @@ PLUGIN_FOLDER_NAME = "c4d-mcp-bridge"
 
 
 def find_c4d_installations():
-    """Search common locations for Cinema 4D installations."""
+    """Search common locations for Cinema 4D user preferences (plugins folder).
+
+    Checks AppData/Roaming/Maxon first (the standard user plugins location),
+    then falls back to Program Files.
+    """
     candidates = []
+
+    # User preferences (AppData/Roaming/Maxon) -- this is where plugins normally go
+    appdata = os.environ.get("APPDATA", "")
+    if appdata:
+        for path in glob.glob(os.path.join(appdata, "Maxon", "Maxon Cinema 4D*")):
+            if os.path.isdir(os.path.join(path, "plugins")):
+                candidates.append(path)
+
+    # Program Files (application install directory) -- less common for plugins
     search_roots = [
-        os.path.join(os.environ.get("PROGRAMFILES", "C:\\Program Files"), "Maxon*"),
-        os.path.join(os.environ.get("PROGRAMFILES", "C:\\Program Files"), "Maxon*", "Cinema*"),
-        "C:\\Program Files\\Maxon Cinema 4D*",
-        "D:\\Program Files\\Maxon Cinema 4D*",
-        "E:\\Program Files\\Maxon Cinema 4D*",
+        os.path.join(os.environ.get("PROGRAMFILES", "C:\\Program Files"), "Maxon Cinema 4D*"),
+        os.path.join(os.environ.get("PROGRAMFILES", "C:\\Program Files"), "Maxon", "Cinema*"),
     ]
     for pattern in search_roots:
         for path in glob.glob(pattern):
-            plugins_dir = os.path.join(path, "plugins")
-            if os.path.isdir(plugins_dir):
+            if os.path.isdir(os.path.join(path, "plugins")):
                 candidates.append(path)
-            elif os.path.isdir(path):
-                # Check one level deeper for versioned folders
-                for sub in glob.glob(os.path.join(path, "Cinema*")):
-                    if os.path.isdir(os.path.join(sub, "plugins")):
-                        candidates.append(sub)
-    # Deduplicate and sort by version (newest first)
+
+    # Deduplicate and sort (AppData entries will appear first since they were added first)
     seen = set()
     unique = []
     for c in candidates:
@@ -49,7 +54,6 @@ def find_c4d_installations():
         if norm not in seen:
             seen.add(norm)
             unique.append(norm)
-    unique.sort(reverse=True)
     return unique
 
 
@@ -146,8 +150,10 @@ def main():
         installations = find_c4d_installations()
         if not installations:
             print("  Could not find Cinema 4D automatically.")
-            print("  Please enter the path to your Cinema 4D folder")
-            print("  (e.g. C:\\Program Files\\Maxon Cinema 4D 2025):\n")
+            print("  Please enter the path to your Cinema 4D preferences folder.")
+            print("  This is usually something like:")
+            print("  C:\\Users\\YourName\\AppData\\Roaming\\Maxon\\Maxon Cinema 4D 2025_XXXXXXXX\n")
+            print("  You can find it in C4D under Edit > Preferences > Open Preferences Folder.\n")
             raw = input("  Path: ").strip().strip('"')
             if raw and os.path.isdir(os.path.join(raw, "plugins")):
                 c4d_path = raw

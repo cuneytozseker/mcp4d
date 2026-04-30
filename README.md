@@ -96,11 +96,13 @@ The compiled plugin is included in the `dist/` folder of this repo:
 dist/c4d-mcp-bridge.xdl64
 ```
 
-Copy `c4d-mcp-bridge.xdl64` into your Cinema 4D plugins directory. The default location is:
+Copy `c4d-mcp-bridge.xdl64` into your Cinema 4D user plugins directory. The default location is:
 
 ```
-C:\Program Files\Maxon Cinema 4D 2025\plugins\c4d-mcp-bridge\
+C:\Users\<YourName>\AppData\Roaming\Maxon\Maxon Cinema 4D 2025_XXXXXXXX\plugins\c4d-mcp-bridge\
 ```
+
+To find your exact path, open Cinema 4D and go to **Edit > Preferences > Open Preferences Folder**. The `plugins` folder is inside there.
 
 Create the `c4d-mcp-bridge` subfolder if it doesn't exist, and place the `.xdl64` file inside it.
 
