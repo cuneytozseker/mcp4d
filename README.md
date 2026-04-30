@@ -239,4 +239,4 @@ _build_v143/bin/Release/plugins/c4d-mcp-bridge/
 
 ## License
 
-Proprietary. Not for redistribution.
+MIT
