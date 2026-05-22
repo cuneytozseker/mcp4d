@@ -81,9 +81,11 @@ These files are part of the agent's working knowledge. You don't need to read th
 
 ### Quick Install
 
-Run the installer script from this repo's folder:
+Clone the repo, then run the installer script from its folder:
 
 ```bash
+git clone https://github.com/cuneytozseker/mcp4d.git
+cd mcp4d
 python install.py
 ```
 
