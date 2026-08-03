@@ -2,6 +2,8 @@
 
 A native C++ Cinema 4D plugin that connects [Claude Code](https://claude.ai/claude-code) to Cinema 4D via the [Model Context Protocol](https://modelcontextprotocol.io/). Read the scene, build geometry, execute Python, cast rays, capture the viewport, all from your terminal.
 
+> [简体中文](README.zh-CN.md)
+
 ```
 Claude Code CLI
   └── Python MCP Server (stdio, thin adapter)
