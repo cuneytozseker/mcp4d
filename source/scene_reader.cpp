@@ -149,7 +149,6 @@ nlohmann::json GetObjectInfo(BaseDocument* doc, const std::string& name)
 	json result = TraverseObject(obj);
 
 	// Add bounding box
-	cinema::Vector bbMin, bbMax;
 	obj->GetRad();  // ensure cache
 	cinema::Vector rad = obj->GetRad();
 	cinema::Vector mp  = obj->GetMp();
