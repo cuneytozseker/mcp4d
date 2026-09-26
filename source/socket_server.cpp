@@ -17,11 +17,14 @@
 	#define CLOSE_SOCKET close
 	#define INVALID_SOCKET -1
 	#define SOCKET_ERROR -1
+	typedef int SOCKET;
 #endif
 
 #include <cstring>
 
+#ifdef _WIN32
 static bool g_wsaInitialized = false;
+#endif
 
 static bool InitWSA()
 {
@@ -128,7 +131,7 @@ void SocketServer::SendResponse(int clientSocket, const std::string& responseJso
 
 	while (remaining > 0)
 	{
-		int sent = send(clientSocket, data, remaining, 0);
+		int sent = (int)send(clientSocket, data, remaining, 0);
 		if (sent <= 0)
 			break;
 		data += sent;
@@ -219,7 +222,7 @@ void SocketServer::HandleClient(int clientSocket)
 
 	while (true)
 	{
-		int received = recv(clientSocket, chunk, sizeof(chunk) - 1, 0);
+		int received = (int)recv(clientSocket, chunk, sizeof(chunk) - 1, 0);
 		if (received <= 0)
 			break;
 

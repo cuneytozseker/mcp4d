@@ -170,7 +170,6 @@ nlohmann::json ImportMesh(BaseDocument* doc, const std::string& filePath,
 			Bool first = true;
 			ComputeWorldBBox(root, bbMin, bbMax, first);
 			Vector meshSize = bbMax - bbMin;
-			Vector meshCenter = (bbMin + bbMax) * 0.5;
 
 			// Scale to fit rect dimensions
 			Float scaleX = (meshSize.x > 0.0001) ? rect.width / meshSize.x : 1.0;
