@@ -1,4 +1,4 @@
-# MCP4D -- Cinema 4D Bridge for Claude Code
+# MCP4D -- Cinema 4D MCP server for Claude Code
 
 A native C++ Cinema 4D plugin that connects [Claude Code](https://claude.ai/claude-code) to Cinema 4D via the [Model Context Protocol](https://modelcontextprotocol.io/). Read the scene, build geometry, execute Python, cast rays, capture the viewport, all from your terminal.
 
